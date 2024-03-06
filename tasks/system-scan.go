@@ -12,29 +12,39 @@ import (
 
 func ScanSystem(client *api.Client, repo *repo.Repo, system string) error {
 	log := slog.With("job", "ScanSystem", "system", system)
-	err := ScanWaypoints(client, repo, system)
+
+	var err error
+
+	log.Info("ScanSystem: waypoints")
+	err = ScanWaypoints(client, repo, system)
 	if err != nil {
 		return err
 	}
 
-	log.Info("scanning markets")
-	err = ScanGoods(client, repo, system)
+	log.Info("ScanSystem: markets")
+	err = ScanMarkets(client, repo, system)
 	if err != nil {
 		return err
 	}
 
-	log.Info("done")
+	log.Info("ScanSystem: shipyards")
+	err = ScanShipyards(client, repo, system)
+	if err != nil {
+		return err
+	}
+
+	log.Info("ScanSystem: done")
 
 	return nil
 }
 
 func ScanWaypoints(client *api.Client, repo *repo.Repo, system string) error {
-	log := slog.With("job", "ScanWaypoints", "system", system)
+	baselog := slog.With("job", "ScanWaypoints", "system", system)
 	ctx := context.TODO()
 	page := 1
 	limit := 20
 	for {
-		log = log.With("page", page, "limit", limit)
+		log := baselog.With("page", page, "limit", limit)
 		log.Info("fetching systems")
 		params := api.GetSystemWaypointsParams{SystemSymbol: system, Limit: api.NewOptInt(limit), Page: api.NewOptInt(page)}
 		res, err := client.GetSystemWaypoints(ctx, params)
@@ -54,13 +64,12 @@ func ScanWaypoints(client *api.Client, repo *repo.Repo, system string) error {
 		}
 		log.Info("page complete")
 		page++
-
 	}
 	return nil
 }
 
-func ScanGoods(client *api.Client, repo *repo.Repo, system string) error {
-	waypoints, err := repo.GetSystemMarkets(system)
+func ScanMarkets(client *api.Client, repo *repo.Repo, system string) error {
+	waypoints, err := repo.GetSystemWaypointsByTrait(system, "MARKETPLACE")
 	if err != nil {
 		return err
 	}
@@ -82,27 +91,31 @@ func ScanGoods(client *api.Client, repo *repo.Repo, system string) error {
 		time.Sleep(600 * time.Millisecond)
 	}
 
-	// waypoints, err = repo.GetSystemShipyards(system)
-	// if err != nil {
-	// 	return err
-	// }
+	return nil
+}
 
-	// ctx = context.TODO()
-	// for _, wp := range waypoints {
-	// 	slog.Info("scanning shipyard: " + wp)
+func ScanShipyards(client *api.Client, repo *repo.Repo, system string) error {
+	waypoints, err := repo.GetSystemWaypointsByTrait(system, "SHIPYARD")
+	if err != nil {
+		return err
+	}
 
-	// 	dat, err := client.GetShipyard(ctx, api.GetShipyardParams{SystemSymbol: system, WaypointSymbol: wp})
-	// 	if err != nil {
-	// 		return err
-	// 	}
+	ctx := context.TODO()
+	for _, wp := range waypoints {
+		slog.Info("scanning shipyard: " + wp)
 
-	// 	err = repo.UpsertMarket(dat.Data)
-	// 	if err != nil {
-	// 		return err
-	// 	}
+		dat, err := client.GetShipyard(ctx, api.GetShipyardParams{SystemSymbol: system, WaypointSymbol: wp})
+		if err != nil {
+			return err
+		}
 
-	// 	time.Sleep(600 * time.Millisecond)
-	// }
+		err = repo.UpsertShipyard(dat.Data)
+		if err != nil {
+			return err
+		}
+
+		time.Sleep(600 * time.Millisecond)
+	}
 
 	return nil
 }

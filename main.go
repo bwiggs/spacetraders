@@ -59,13 +59,6 @@ func exec() {
 		log.Fatal(err)
 	}
 
-	// // rebuild the market sand shipyard info db tables
-	// err = tasks.ScanSystem(c, r, "X1-HK42")
-	// if err != nil {
-	// 	slog.Error(err.Error())
-	// }
-	// return
-
 	contracts, err := c.GetContracts(ctx, api.GetContractsParams{})
 	if err != nil {
 		log.Fatal(err)
@@ -86,6 +79,9 @@ func exec() {
 	}
 
 	tasks.SetInterval(ct.Update, 15*time.Second)
+	tasks.SetInterval(func() {
+		tasks.LogAgentMetrics(c)
+	}, 1*time.Minute)
 }
 
 func shutdown() {

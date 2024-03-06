@@ -3,8 +3,15 @@ CREATE TABLE waypoints (
     type TEXT NOT NULL,
     x TEXT NOT NULL,
     y TEXT NOT NULL,
-    is_market boolean NOT NULL,
-    is_shipyard boolean NOT NULL,
+
+    PRIMARY KEY (symbol)
+);
+
+CREATE TABLE goods (
+    symbol TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+
     PRIMARY KEY (symbol)
 );
 
@@ -12,5 +19,14 @@ CREATE TABLE markets (
     waypoint TEXT NOT NULL,
     good TEXT NOT NULL,
     type TEXT NOT NULL,
-    PRIMARY KEY (waypoint, good, type)
+    volume INTEGER,
+    activity INTEGER,
+    bid INTEGER,
+    ask INTEGER,
+
+    PRIMARY KEY (waypoint, good, type),
+
+    FOREIGN KEY(waypoint) REFERENCES waypoints(symbol),
+    FOREIGN KEY(good) REFERENCES goods(symbol)
 );
+

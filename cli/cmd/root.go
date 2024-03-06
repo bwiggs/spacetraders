@@ -11,7 +11,7 @@ var rootCmd = &cobra.Command{
 	Use:   "st",
 	Short: "spacetraders.io cli interface",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
+		cmd.Help()
 	},
 }
 
