@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/bwiggs/spacetraders-go/api"
 	"github.com/davecgh/go-spew/spew"
@@ -129,17 +130,14 @@ func (m *ShipAssignment) Update(client *api.Client) {
 	}
 
 	if !m.IsFuelFull() {
-		lg.Warn(fmt.Sprintf("%s need to refuel", m.Ship.Symbol))
 
 		if !m.IsDocked() {
-			lg.Warn(fmt.Sprintf("%s docking", m.Ship.Symbol))
 			_, err := client.DockShip(ctx, api.DockShipParams{ShipSymbol: m.Symbol})
 			if err != nil {
 				lg.Error(err.Error())
 				return
 			}
 		}
-		lg.Warn(fmt.Sprintf("%s refueling", m.Ship.Symbol))
 		_, err := client.RefuelShip(ctx, api.NewOptRefuelShipReq(api.RefuelShipReq{Units: api.NewOptInt(m.Ship.Fuel.Capacity - m.Ship.Fuel.Current)}), api.RefuelShipParams{ShipSymbol: m.Symbol})
 		if err != nil {
 			lg.Error(err.Error())
@@ -183,6 +181,8 @@ func (m *ShipAssignment) Update(client *api.Client) {
 				lg.Error(err.Error())
 				return
 			}
+			// getting some 400s after this, hoping 3 second delay fixes it
+			time.Sleep(3 * time.Second)
 		}
 
 		lg.Info(fmt.Sprintf("%s extracting resources", m.Ship.Symbol))

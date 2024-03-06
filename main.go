@@ -73,15 +73,20 @@ func exec() {
 
 	for _, ship := range ships.Data {
 		if ship.Registration.Role == "EXCAVATOR" || ship.Registration.Role == "COMMAND" {
-			// if ship.Symbol == "BWIGGS-3" {
 			ct.AssignShip(&ship)
 		}
 	}
 
-	tasks.SetInterval(ct.Update, 15*time.Second)
+	tasks.SetInterval(ct.Update, 20*time.Second)
+
 	tasks.SetInterval(func() {
 		tasks.LogAgentMetrics(c)
-	}, 1*time.Minute)
+	}, 5*time.Minute)
+
+	// tasks.SetInterval(func() {
+	// 	tasks.ScanMarkets(c, r, "X1-HK42")
+	// 	tasks.ScanShipyards(c, r, "X1-HK42")
+	// }, 1*time.Hour)
 }
 
 func shutdown() {

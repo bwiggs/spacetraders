@@ -45,7 +45,6 @@ func postInflux(measurement string, field string, value any) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to write point to influxdb")
 	}
-	slog.Debug("influxdb post success")
 
 	return nil
 }

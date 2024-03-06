@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/bwiggs/spacetraders-go/client"
@@ -17,7 +18,34 @@ var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "updates local data for systems, markets and shipyards.",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := updateSystemData("X1-HK42")
+		system := "X1-HK42"
+
+		client, err := client.Client()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		r, err := repo.GetRepo()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if len(args) == 0 {
+			fmt.Println("arg expected: all, markets, shipyards, waypoints")
+			return
+		}
+
+		switch args[0] {
+		case "all":
+			err = tasks.ScanSystem(client, r, system)
+		case "markets":
+			err = tasks.ScanMarkets(client, r, system)
+		case "shipyards":
+			err = tasks.ScanShipyards(client, r, system)
+		case "waypoints":
+			err = tasks.ScanWaypoints(client, r, system)
+		}
+
 		if err != nil {
 			log.Fatal(err)
 		}
