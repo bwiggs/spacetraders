@@ -18,8 +18,6 @@ var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "updates local data for systems, markets and shipyards.",
 	Run: func(cmd *cobra.Command, args []string) {
-		system := "X1-HK42"
-
 		client, err := client.Client()
 		if err != nil {
 			log.Fatal(err)
@@ -30,20 +28,27 @@ var updateCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		if len(args) == 0 {
+		nargs := len(args)
+		if nargs < 2 {
 			fmt.Println("arg expected: all, markets, shipyards, waypoints")
 			return
 		}
 
+		target := args[1]
+
 		switch args[0] {
 		case "all":
-			err = tasks.ScanSystem(client, r, system)
+			err = tasks.ScanSystem(client, r, target)
 		case "markets":
-			err = tasks.ScanMarkets(client, r, system)
+			if len(target) == 7 {
+				err = tasks.ScanMarkets(client, r, target)
+			} else {
+				err = tasks.ScanMarket(client, r, target)
+			}
 		case "shipyards":
-			err = tasks.ScanShipyards(client, r, system)
+			err = tasks.ScanShipyards(client, r, target)
 		case "waypoints":
-			err = tasks.ScanWaypoints(client, r, system)
+			err = tasks.ScanWaypoints(client, r, target)
 		}
 
 		if err != nil {

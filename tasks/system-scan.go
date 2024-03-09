@@ -68,27 +68,30 @@ func ScanWaypoints(client *api.Client, repo *repo.Repo, system string) error {
 	return nil
 }
 
+func ScanMarket(client *api.Client, repo *repo.Repo, wp string) error {
+	slog.Info("scanning market: " + wp)
+
+	dat, err := client.GetMarket(context.TODO(), api.GetMarketParams{SystemSymbol: wp[:7], WaypointSymbol: wp})
+	if err != nil {
+		return err
+	}
+
+	err = repo.UpsertMarket(dat.Data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func ScanMarkets(client *api.Client, repo *repo.Repo, system string) error {
 	waypoints, err := repo.GetSystemWaypointsByTrait(system, "MARKETPLACE")
 	if err != nil {
 		return err
 	}
 
-	ctx := context.TODO()
 	for _, wp := range waypoints {
-		slog.Info("scanning market: " + wp)
-
-		dat, err := client.GetMarket(ctx, api.GetMarketParams{SystemSymbol: system, WaypointSymbol: wp})
-		if err != nil {
-			return err
-		}
-
-		err = repo.UpsertMarket(dat.Data)
-		if err != nil {
-			return err
-		}
-
-		time.Sleep(600 * time.Millisecond)
+		ScanMarket(client, repo, wp)
+		time.Sleep(750 * time.Millisecond)
 	}
 
 	return nil
