@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/bwiggs/spacetraders-go/api"
+	"github.com/bwiggs/spacetraders-go/bot"
+	"github.com/bwiggs/spacetraders-go/client"
 	"github.com/bwiggs/spacetraders-go/models"
 	"github.com/bwiggs/spacetraders-go/repo"
 	"github.com/bwiggs/spacetraders-go/tasks"
@@ -52,47 +54,31 @@ func (tp TokenProvider) AgentToken(ctx context.Context, operationName string) (a
 }
 
 func exec() {
-
-	ctx := context.Background()
-	c, err := api.NewClient(viper.GetString("BASE_URL"), TokenProvider{})
+	client, err := client.Client()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	contracts, err := c.GetContracts(ctx, api.GetContractsParams{})
-	if err != nil {
-		log.Fatal(err)
-	}
+	initBackgroundTasks(client)
 
-	ct := models.NewContractManager(c, contracts.Data[0])
-
-	ships, err := c.GetMyShips(ctx, api.GetMyShipsParams{})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, ship := range ships.Data {
-		if ship.Registration.Role == "EXCAVATOR" || ship.Registration.Role == "COMMAND" {
-			ct.AssignShip(&ship)
-		}
-	}
-
-	tasks.SetInterval(ct.Update, 20*time.Second)
-
-	tasks.SetInterval(func() {
-		tasks.LogAgentMetrics(c)
-	}, 5*time.Minute)
-
-	// tasks.SetInterval(func() {
-	// 	tasks.ScanMarkets(c, r, "X1-HK42")
-	// 	tasks.ScanShipyards(c, r, "X1-HK42")
-	// }, 1*time.Hour)
+	bot.Start(client)
 }
 
 func shutdown() {
 	slog.Info("cleaning up")
 	tasks.Stop()
 	r.Close()
+}
+
+func initBackgroundTasks(client *api.Client) {
+	tasks.SetInterval(func() {
+		tasks.LogAgentMetrics(client)
+	}, 1*time.Minute)
+
+	// tasks.SetInterval(func() {
+	// 	tasks.ScanMarkets(c, r, "X1-HK42")
+	// 	tasks.ScanShipyards(c, r, "X1-HK42")
+	// }, 1*time.Hour)
 }
 
 func run() {
@@ -106,4 +92,28 @@ func run() {
 	}()
 
 	select {}
+}
+
+func mineAsteroid(client *api.Client) {
+	ctx := context.Background()
+
+	contracts, err := client.GetContracts(ctx, api.GetContractsParams{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ct := models.NewContractManager(client, contracts.Data[0])
+
+	ships, err := client.GetMyShips(ctx, api.GetMyShipsParams{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, ship := range ships.Data {
+		if ship.Registration.Role == "EXCAVATOR" || ship.Registration.Role == "COMMAND" {
+			ct.AssignShip(&ship)
+		}
+	}
+
+	tasks.SetInterval(ct.Update, 20*time.Second)
 }
