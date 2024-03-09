@@ -97,27 +97,30 @@ func ScanMarkets(client *api.Client, repo *repo.Repo, system string) error {
 	return nil
 }
 
+func ScanShipyard(client *api.Client, repo *repo.Repo, wp string) error {
+	slog.Info("scanning shipyard: " + wp)
+
+	dat, err := client.GetShipyard(context.TODO(), api.GetShipyardParams{SystemSymbol: wp[:7], WaypointSymbol: wp})
+	if err != nil {
+		return err
+	}
+
+	err = repo.UpsertShipyard(dat.Data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func ScanShipyards(client *api.Client, repo *repo.Repo, system string) error {
 	waypoints, err := repo.GetSystemWaypointsByTrait(system, "SHIPYARD")
 	if err != nil {
 		return err
 	}
 
-	ctx := context.TODO()
 	for _, wp := range waypoints {
-		slog.Info("scanning shipyard: " + wp)
-
-		dat, err := client.GetShipyard(ctx, api.GetShipyardParams{SystemSymbol: system, WaypointSymbol: wp})
-		if err != nil {
-			return err
-		}
-
-		err = repo.UpsertShipyard(dat.Data)
-		if err != nil {
-			return err
-		}
-
-		time.Sleep(600 * time.Millisecond)
+		ScanShipyard(client, repo, wp)
+		time.Sleep(750 * time.Millisecond)
 	}
 
 	return nil

@@ -8,6 +8,7 @@ import (
 	"github.com/bwiggs/spacetraders-go/repo"
 	"github.com/bwiggs/spacetraders-go/tasks"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func init() {
@@ -29,22 +30,27 @@ var updateCmd = &cobra.Command{
 		}
 
 		nargs := len(args)
-		if nargs < 2 {
-			fmt.Println("arg expected: all, markets, shipyards, waypoints")
+		if nargs == 0 {
+			fmt.Println("arg expected: all, market(s), shipyard(s), waypoint(s)")
 			return
 		}
 
-		target := args[1]
+		var target string
+		if nargs == 2 {
+			target = args[1]
+		} else {
+			target = viper.GetString("SYSTEM")
+		}
 
 		switch args[0] {
 		case "all":
 			err = tasks.ScanSystem(client, r, target)
 		case "markets":
-			if len(target) == 7 {
-				err = tasks.ScanMarkets(client, r, target)
-			} else {
-				err = tasks.ScanMarket(client, r, target)
-			}
+			err = tasks.ScanMarkets(client, r, target)
+		case "market":
+			err = tasks.ScanMarket(client, r, target)
+		case "shipyard":
+			err = tasks.ScanShipyard(client, r, target)
 		case "shipyards":
 			err = tasks.ScanShipyards(client, r, target)
 		case "waypoints":
