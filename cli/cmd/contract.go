@@ -23,11 +23,23 @@ var contractCmd = &cobra.Command{
 	Use:   "contracts",
 	Short: "returns contracts",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := listContracts()
+		var err error
+		if len(args) == 1 {
+			if args[0] == "new" {
+				err = listContracts()
+			}
+		} else {
+			err = listContracts()
+		}
+
 		if err != nil {
 			log.Fatal(err)
 		}
 	},
+}
+
+func newContract() error {
+	return nil
 }
 
 func listContracts() error {
