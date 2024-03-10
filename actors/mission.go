@@ -2,6 +2,7 @@ package actors
 
 type Mission interface {
 	Execute(*Ship)
+	String() string
 }
 
 type IdleMission struct {

@@ -1,6 +1,10 @@
 package repo
 
 import (
+	"fmt"
+	"log"
+	"strings"
+
 	"github.com/bwiggs/spacetraders-go/api"
 	"github.com/pkg/errors"
 )
@@ -93,4 +97,40 @@ func (r *Repo) UpsertTradeGoods(goods []api.TradeGood) error {
 	tx.Commit()
 
 	return nil
+}
+
+// FindMarketsForGoods returns a list of markets which the provided goods could
+// be sold at. Markets are returned with the top result accepting the most
+// goods, and the bottom accepting the least goods.
+func (r *Repo) FindMarketsForGoods(goods []string) ([]string, error) {
+
+	params := strings.Join(strings.Split(strings.Repeat("?", len(goods)), ""), ", ")
+	sql := fmt.Sprintf(`with results as (SELECT waypoint, count(*) as sellables from markets where type = 'IMPORT' and good in (%s) group by waypoint order by sellables desc) select waypoint from results`, params)
+
+	// this is dumb
+	s := make([]any, len(goods))
+	for i, v := range goods {
+		s[i] = v
+	}
+
+	rows, err := r.db.Query(sql, s...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	waypoints := make([]string, 0)
+	for rows.Next() {
+		var wp string
+		if err := rows.Scan(&wp); err != nil {
+			log.Fatal(err)
+		}
+		waypoints = append(waypoints, wp)
+	}
+	// Check for errors from iterating over rows.
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return waypoints, nil
 }

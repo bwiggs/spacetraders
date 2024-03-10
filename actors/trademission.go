@@ -3,13 +3,25 @@ package actors
 import (
 	"fmt"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 type TradeMission struct {
-	good   string
-	origin string
-	dest   string
-	state  State
+	good       string
+	origin     string
+	dest       string
+	state      State
+	contractID string
+}
+
+func NewContractMission(good, origin, dest string) *TradeMission {
+	return &TradeMission{
+		good:   good,
+		origin: origin,
+		dest:   dest,
+		state:  IdleState,
+	}
 }
 
 func NewTradeMission(good, origin, dest string) *TradeMission {
@@ -19,6 +31,10 @@ func NewTradeMission(good, origin, dest string) *TradeMission {
 		dest:   dest,
 		state:  IdleState,
 	}
+}
+
+func (m *TradeMission) String() string {
+	return fmt.Sprintf("Trade Route: %s: %s -> %s", m.good, m.origin, m.dest)
 }
 
 func (m *TradeMission) Execute(ship *Ship) {
@@ -55,8 +71,16 @@ func (m *TradeMission) Execute(ship *Ship) {
 			return
 		}
 		m.state = SellState
+	case ContractDeliverState:
+		contract, err := ship.Deliver(m.good, m.contractID)
+		if err != nil {
+			ship.log.Error(err.Error())
+			return
+		}
+		spew.Dump(contract)
+		m.state = TransitOriginState
 	case SellState:
-		if err := ship.Sell(m.good, m.dest); err != nil {
+		if err := ship.Sell(m.good); err != nil {
 			ship.log.Error(err.Error())
 			return
 		}

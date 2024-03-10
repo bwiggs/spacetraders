@@ -59,9 +59,9 @@ func exec() {
 		log.Fatal(err)
 	}
 
-	initBackgroundTasks(client)
+	go initBackgroundTasks(client)
 
-	bot.Start(client)
+	bot.Start(client, r)
 }
 
 func shutdown() {
@@ -75,10 +75,10 @@ func initBackgroundTasks(client *api.Client) {
 		tasks.LogAgentMetrics(client)
 	}, 1*time.Minute)
 
-	// tasks.SetInterval(func() {
-	// 	tasks.ScanMarkets(c, r, "X1-HK42")
-	// 	tasks.ScanShipyards(c, r, "X1-HK42")
-	// }, 1*time.Hour)
+	tasks.SetInterval(func() {
+		tasks.ScanMarkets(client, r, "X1-HK42")
+		tasks.ScanShipyards(client, r, "X1-HK42")
+	}, 5*time.Minute)
 }
 
 func run() {
