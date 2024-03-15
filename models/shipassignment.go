@@ -281,7 +281,6 @@ func (m *ShipAssignment) Update(client *api.Client) {
 		}
 
 		// TRANSITION TO A MARKET
-
 		dest := "X1-HK42-H48"
 		if m.Nav.WaypointSymbol == "X1-HK42-H48" {
 			dest = "X1-HK42-H50"

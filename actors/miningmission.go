@@ -60,7 +60,6 @@ func (m *MiningMission) Execute(ship *Ship) {
 		err := ship.Transit(m.origin)
 		if err != nil {
 			ship.log.Error(err.Error())
-			ship.Transit("X1-HK42-A1")
 			return
 		}
 
@@ -134,12 +133,8 @@ func (m *MiningMission) Execute(ship *Ship) {
 			return
 		}
 
-		ship.log.Warn("couldnt navigate to any waypoints, heading to A1")
-		err = ship.Transit("X1-HK42-A1")
-		if err != nil {
-			ship.log.Error(err.Error())
-			return
-		}
+		ship.log.Warn("couldnt navigate to any waypoints")
+		return
 
 	case SellState:
 		if err := ship.Refuel(); err != nil {

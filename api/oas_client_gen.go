@@ -222,6 +222,18 @@ type Invoker interface {
 	//
 	// GET /my/ships
 	GetMyShips(ctx context.Context, params GetMyShipsParams) (*GetMyShipsOK, error)
+	// GetRepairShip invokes get-repair-ship operation.
+	//
+	// Get the cost of repairing a ship.
+	//
+	// GET /my/ships/{shipSymbol}/repair
+	GetRepairShip(ctx context.Context, params GetRepairShipParams) (*GetRepairShipOK, error)
+	// GetScrapShip invokes get-scrap-ship operation.
+	//
+	// Get the amount of value that will be returned when scrapping a ship.
+	//
+	// GET /my/ships/{shipSymbol}/scrap
+	GetScrapShip(ctx context.Context, params GetScrapShipParams) (*GetScrapShipOK, error)
 	// GetShipCooldown invokes get-ship-cooldown operation.
 	//
 	// Retrieve the details of your ship's reactor cooldown. Some actions such as activating your jump
@@ -411,6 +423,22 @@ type Invoker interface {
 	//
 	// POST /my/ships/{shipSymbol}/mounts/remove
 	RemoveMount(ctx context.Context, request OptRemoveMountReq, params RemoveMountParams) (*RemoveMountCreated, error)
+	// RepairShip invokes repair-ship operation.
+	//
+	// Repair a ship, restoring the ship to maximum condition. The ship must be docked at a waypoint that
+	// has the `Shipyard` trait in order to use this function. To preview the cost of repairing the ship,
+	// use the Get action.
+	//
+	// POST /my/ships/{shipSymbol}/repair
+	RepairShip(ctx context.Context, params RepairShipParams) (*RepairShipOK, error)
+	// ScrapShip invokes scrap-ship operation.
+	//
+	// Scrap a ship, removing it from the game and returning a portion of the ship's value to the agent.
+	// The ship must be docked in a waypoint that has the `Shipyard` trait in order to use this function.
+	// To preview the amount of value that will be returned, use the Get Ship action.
+	//
+	// POST /my/ships/{shipSymbol}/scrap
+	ScrapShip(ctx context.Context, params ScrapShipParams) (*ScrapShipOK, error)
 	// SellCargo invokes sell-cargo operation.
 	//
 	// Sell cargo in your ship to a market that trades this cargo. The ship must be docked in a waypoint
@@ -3789,6 +3817,254 @@ func (c *Client) sendGetMyShips(ctx context.Context, params GetMyShipsParams) (r
 	return result, nil
 }
 
+// GetRepairShip invokes get-repair-ship operation.
+//
+// Get the cost of repairing a ship.
+//
+// GET /my/ships/{shipSymbol}/repair
+func (c *Client) GetRepairShip(ctx context.Context, params GetRepairShipParams) (*GetRepairShipOK, error) {
+	res, err := c.sendGetRepairShip(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetRepairShip(ctx context.Context, params GetRepairShipParams) (res *GetRepairShipOK, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("get-repair-ship"),
+		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/repair"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, "GetRepairShip",
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/my/ships/"
+	{
+		// Encode "shipSymbol" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "shipSymbol",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ShipSymbol))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/repair"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:AgentToken"
+			switch err := c.securityAgentToken(ctx, "GetRepairShip", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AgentToken\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetRepairShipResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetScrapShip invokes get-scrap-ship operation.
+//
+// Get the amount of value that will be returned when scrapping a ship.
+//
+// GET /my/ships/{shipSymbol}/scrap
+func (c *Client) GetScrapShip(ctx context.Context, params GetScrapShipParams) (*GetScrapShipOK, error) {
+	res, err := c.sendGetScrapShip(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetScrapShip(ctx context.Context, params GetScrapShipParams) (res *GetScrapShipOK, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("get-scrap-ship"),
+		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/scrap"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, "GetScrapShip",
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/my/ships/"
+	{
+		// Encode "shipSymbol" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "shipSymbol",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ShipSymbol))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/scrap"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:AgentToken"
+			switch err := c.securityAgentToken(ctx, "GetScrapShip", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AgentToken\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetScrapShipResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetShipCooldown invokes get-ship-cooldown operation.
 //
 // Retrieve the details of your ship's reactor cooldown. Some actions such as activating your jump
@@ -6389,6 +6665,258 @@ func (c *Client) sendRemoveMount(ctx context.Context, request OptRemoveMountReq,
 
 	stage = "DecodeResponse"
 	result, err := decodeRemoveMountResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// RepairShip invokes repair-ship operation.
+//
+// Repair a ship, restoring the ship to maximum condition. The ship must be docked at a waypoint that
+// has the `Shipyard` trait in order to use this function. To preview the cost of repairing the ship,
+// use the Get action.
+//
+// POST /my/ships/{shipSymbol}/repair
+func (c *Client) RepairShip(ctx context.Context, params RepairShipParams) (*RepairShipOK, error) {
+	res, err := c.sendRepairShip(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendRepairShip(ctx context.Context, params RepairShipParams) (res *RepairShipOK, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("repair-ship"),
+		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/repair"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, "RepairShip",
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/my/ships/"
+	{
+		// Encode "shipSymbol" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "shipSymbol",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ShipSymbol))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/repair"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:AgentToken"
+			switch err := c.securityAgentToken(ctx, "RepairShip", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AgentToken\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRepairShipResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ScrapShip invokes scrap-ship operation.
+//
+// Scrap a ship, removing it from the game and returning a portion of the ship's value to the agent.
+// The ship must be docked in a waypoint that has the `Shipyard` trait in order to use this function.
+// To preview the amount of value that will be returned, use the Get Ship action.
+//
+// POST /my/ships/{shipSymbol}/scrap
+func (c *Client) ScrapShip(ctx context.Context, params ScrapShipParams) (*ScrapShipOK, error) {
+	res, err := c.sendScrapShip(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendScrapShip(ctx context.Context, params ScrapShipParams) (res *ScrapShipOK, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("scrap-ship"),
+		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/scrap"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, "ScrapShip",
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/my/ships/"
+	{
+		// Encode "shipSymbol" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "shipSymbol",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ShipSymbol))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/scrap"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:AgentToken"
+			switch err := c.securityAgentToken(ctx, "ScrapShip", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AgentToken\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeScrapShipResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

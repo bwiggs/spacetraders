@@ -967,9 +967,10 @@ func (s *ExtractResourcesCreated) SetData(val ExtractResourcesCreatedData) {
 }
 
 type ExtractResourcesCreatedData struct {
-	Cooldown   Cooldown   `json:"cooldown"`
-	Extraction Extraction `json:"extraction"`
-	Cargo      ShipCargo  `json:"cargo"`
+	Cooldown   Cooldown                                `json:"cooldown"`
+	Extraction Extraction                              `json:"extraction"`
+	Cargo      ShipCargo                               `json:"cargo"`
+	Events     []ExtractResourcesCreatedDataEventsItem `json:"events"`
 }
 
 // GetCooldown returns the value of Cooldown.
@@ -987,6 +988,11 @@ func (s *ExtractResourcesCreatedData) GetCargo() ShipCargo {
 	return s.Cargo
 }
 
+// GetEvents returns the value of Events.
+func (s *ExtractResourcesCreatedData) GetEvents() []ExtractResourcesCreatedDataEventsItem {
+	return s.Events
+}
+
 // SetCooldown sets the value of Cooldown.
 func (s *ExtractResourcesCreatedData) SetCooldown(val Cooldown) {
 	s.Cooldown = val
@@ -1000,6 +1006,51 @@ func (s *ExtractResourcesCreatedData) SetExtraction(val Extraction) {
 // SetCargo sets the value of Cargo.
 func (s *ExtractResourcesCreatedData) SetCargo(val ShipCargo) {
 	s.Cargo = val
+}
+
+// SetEvents sets the value of Events.
+func (s *ExtractResourcesCreatedData) SetEvents(val []ExtractResourcesCreatedDataEventsItem) {
+	s.Events = val
+}
+
+// ExtractResourcesCreatedDataEventsItem represents sum type.
+type ExtractResourcesCreatedDataEventsItem struct {
+	Type               ExtractResourcesCreatedDataEventsItemType // switch on this field
+	ShipConditionEvent ShipConditionEvent
+}
+
+// ExtractResourcesCreatedDataEventsItemType is oneOf type of ExtractResourcesCreatedDataEventsItem.
+type ExtractResourcesCreatedDataEventsItemType string
+
+// Possible values for ExtractResourcesCreatedDataEventsItemType.
+const (
+	ShipConditionEventExtractResourcesCreatedDataEventsItem ExtractResourcesCreatedDataEventsItemType = "ShipConditionEvent"
+)
+
+// IsShipConditionEvent reports whether ExtractResourcesCreatedDataEventsItem is ShipConditionEvent.
+func (s ExtractResourcesCreatedDataEventsItem) IsShipConditionEvent() bool {
+	return s.Type == ShipConditionEventExtractResourcesCreatedDataEventsItem
+}
+
+// SetShipConditionEvent sets ExtractResourcesCreatedDataEventsItem to ShipConditionEvent.
+func (s *ExtractResourcesCreatedDataEventsItem) SetShipConditionEvent(v ShipConditionEvent) {
+	s.Type = ShipConditionEventExtractResourcesCreatedDataEventsItem
+	s.ShipConditionEvent = v
+}
+
+// GetShipConditionEvent returns ShipConditionEvent and true boolean if ExtractResourcesCreatedDataEventsItem is ShipConditionEvent.
+func (s ExtractResourcesCreatedDataEventsItem) GetShipConditionEvent() (v ShipConditionEvent, ok bool) {
+	if !s.IsShipConditionEvent() {
+		return v, false
+	}
+	return s.ShipConditionEvent, true
+}
+
+// NewShipConditionEventExtractResourcesCreatedDataEventsItem returns new ExtractResourcesCreatedDataEventsItem from ShipConditionEvent.
+func NewShipConditionEventExtractResourcesCreatedDataEventsItem(v ShipConditionEvent) ExtractResourcesCreatedDataEventsItem {
+	var s ExtractResourcesCreatedDataEventsItem
+	s.SetShipConditionEvent(v)
+	return s
 }
 
 type ExtractResourcesReq struct {
@@ -1031,9 +1082,10 @@ func (s *ExtractResourcesWithSurveyCreated) SetData(val ExtractResourcesWithSurv
 }
 
 type ExtractResourcesWithSurveyCreatedData struct {
-	Cooldown   Cooldown   `json:"cooldown"`
-	Extraction Extraction `json:"extraction"`
-	Cargo      ShipCargo  `json:"cargo"`
+	Cooldown   Cooldown                                          `json:"cooldown"`
+	Extraction Extraction                                        `json:"extraction"`
+	Cargo      ShipCargo                                         `json:"cargo"`
+	Events     []ExtractResourcesWithSurveyCreatedDataEventsItem `json:"events"`
 }
 
 // GetCooldown returns the value of Cooldown.
@@ -1051,6 +1103,11 @@ func (s *ExtractResourcesWithSurveyCreatedData) GetCargo() ShipCargo {
 	return s.Cargo
 }
 
+// GetEvents returns the value of Events.
+func (s *ExtractResourcesWithSurveyCreatedData) GetEvents() []ExtractResourcesWithSurveyCreatedDataEventsItem {
+	return s.Events
+}
+
 // SetCooldown sets the value of Cooldown.
 func (s *ExtractResourcesWithSurveyCreatedData) SetCooldown(val Cooldown) {
 	s.Cooldown = val
@@ -1064,6 +1121,51 @@ func (s *ExtractResourcesWithSurveyCreatedData) SetExtraction(val Extraction) {
 // SetCargo sets the value of Cargo.
 func (s *ExtractResourcesWithSurveyCreatedData) SetCargo(val ShipCargo) {
 	s.Cargo = val
+}
+
+// SetEvents sets the value of Events.
+func (s *ExtractResourcesWithSurveyCreatedData) SetEvents(val []ExtractResourcesWithSurveyCreatedDataEventsItem) {
+	s.Events = val
+}
+
+// ExtractResourcesWithSurveyCreatedDataEventsItem represents sum type.
+type ExtractResourcesWithSurveyCreatedDataEventsItem struct {
+	Type               ExtractResourcesWithSurveyCreatedDataEventsItemType // switch on this field
+	ShipConditionEvent ShipConditionEvent
+}
+
+// ExtractResourcesWithSurveyCreatedDataEventsItemType is oneOf type of ExtractResourcesWithSurveyCreatedDataEventsItem.
+type ExtractResourcesWithSurveyCreatedDataEventsItemType string
+
+// Possible values for ExtractResourcesWithSurveyCreatedDataEventsItemType.
+const (
+	ShipConditionEventExtractResourcesWithSurveyCreatedDataEventsItem ExtractResourcesWithSurveyCreatedDataEventsItemType = "ShipConditionEvent"
+)
+
+// IsShipConditionEvent reports whether ExtractResourcesWithSurveyCreatedDataEventsItem is ShipConditionEvent.
+func (s ExtractResourcesWithSurveyCreatedDataEventsItem) IsShipConditionEvent() bool {
+	return s.Type == ShipConditionEventExtractResourcesWithSurveyCreatedDataEventsItem
+}
+
+// SetShipConditionEvent sets ExtractResourcesWithSurveyCreatedDataEventsItem to ShipConditionEvent.
+func (s *ExtractResourcesWithSurveyCreatedDataEventsItem) SetShipConditionEvent(v ShipConditionEvent) {
+	s.Type = ShipConditionEventExtractResourcesWithSurveyCreatedDataEventsItem
+	s.ShipConditionEvent = v
+}
+
+// GetShipConditionEvent returns ShipConditionEvent and true boolean if ExtractResourcesWithSurveyCreatedDataEventsItem is ShipConditionEvent.
+func (s ExtractResourcesWithSurveyCreatedDataEventsItem) GetShipConditionEvent() (v ShipConditionEvent, ok bool) {
+	if !s.IsShipConditionEvent() {
+		return v, false
+	}
+	return s.ShipConditionEvent, true
+}
+
+// NewShipConditionEventExtractResourcesWithSurveyCreatedDataEventsItem returns new ExtractResourcesWithSurveyCreatedDataEventsItem from ShipConditionEvent.
+func NewShipConditionEventExtractResourcesWithSurveyCreatedDataEventsItem(v ShipConditionEvent) ExtractResourcesWithSurveyCreatedDataEventsItem {
+	var s ExtractResourcesWithSurveyCreatedDataEventsItem
+	s.SetShipConditionEvent(v)
+	return s
 }
 
 // Extraction details.
@@ -2118,6 +2220,62 @@ func (s *GetMyShipsOK) SetData(val []Ship) {
 // SetMeta sets the value of Meta.
 func (s *GetMyShipsOK) SetMeta(val Meta) {
 	s.Meta = val
+}
+
+type GetRepairShipOK struct {
+	Data GetRepairShipOKData `json:"data"`
+}
+
+// GetData returns the value of Data.
+func (s *GetRepairShipOK) GetData() GetRepairShipOKData {
+	return s.Data
+}
+
+// SetData sets the value of Data.
+func (s *GetRepairShipOK) SetData(val GetRepairShipOKData) {
+	s.Data = val
+}
+
+type GetRepairShipOKData struct {
+	Transaction RepairTransaction `json:"transaction"`
+}
+
+// GetTransaction returns the value of Transaction.
+func (s *GetRepairShipOKData) GetTransaction() RepairTransaction {
+	return s.Transaction
+}
+
+// SetTransaction sets the value of Transaction.
+func (s *GetRepairShipOKData) SetTransaction(val RepairTransaction) {
+	s.Transaction = val
+}
+
+type GetScrapShipOK struct {
+	Data GetScrapShipOKData `json:"data"`
+}
+
+// GetData returns the value of Data.
+func (s *GetScrapShipOK) GetData() GetScrapShipOKData {
+	return s.Data
+}
+
+// SetData sets the value of Data.
+func (s *GetScrapShipOK) SetData(val GetScrapShipOKData) {
+	s.Data = val
+}
+
+type GetScrapShipOKData struct {
+	Transaction ScrapTransaction `json:"transaction"`
+}
+
+// GetTransaction returns the value of Transaction.
+func (s *GetScrapShipOKData) GetTransaction() ScrapTransaction {
+	return s.Transaction
+}
+
+// SetTransaction sets the value of Transaction.
+func (s *GetScrapShipOKData) SetTransaction(val ScrapTransaction) {
+	s.Transaction = val
 }
 
 // GetShipCooldownNoContent is response for GetShipCooldown operation.
@@ -3275,8 +3433,9 @@ func (s *NavigateShipOK) SetData(val NavigateShipOKData) {
 }
 
 type NavigateShipOKData struct {
-	Fuel ShipFuel `json:"fuel"`
-	Nav  ShipNav  `json:"nav"`
+	Fuel   ShipFuel                       `json:"fuel"`
+	Nav    ShipNav                        `json:"nav"`
+	Events []NavigateShipOKDataEventsItem `json:"events"`
 }
 
 // GetFuel returns the value of Fuel.
@@ -3289,6 +3448,11 @@ func (s *NavigateShipOKData) GetNav() ShipNav {
 	return s.Nav
 }
 
+// GetEvents returns the value of Events.
+func (s *NavigateShipOKData) GetEvents() []NavigateShipOKDataEventsItem {
+	return s.Events
+}
+
 // SetFuel sets the value of Fuel.
 func (s *NavigateShipOKData) SetFuel(val ShipFuel) {
 	s.Fuel = val
@@ -3297,6 +3461,51 @@ func (s *NavigateShipOKData) SetFuel(val ShipFuel) {
 // SetNav sets the value of Nav.
 func (s *NavigateShipOKData) SetNav(val ShipNav) {
 	s.Nav = val
+}
+
+// SetEvents sets the value of Events.
+func (s *NavigateShipOKData) SetEvents(val []NavigateShipOKDataEventsItem) {
+	s.Events = val
+}
+
+// NavigateShipOKDataEventsItem represents sum type.
+type NavigateShipOKDataEventsItem struct {
+	Type               NavigateShipOKDataEventsItemType // switch on this field
+	ShipConditionEvent ShipConditionEvent
+}
+
+// NavigateShipOKDataEventsItemType is oneOf type of NavigateShipOKDataEventsItem.
+type NavigateShipOKDataEventsItemType string
+
+// Possible values for NavigateShipOKDataEventsItemType.
+const (
+	ShipConditionEventNavigateShipOKDataEventsItem NavigateShipOKDataEventsItemType = "ShipConditionEvent"
+)
+
+// IsShipConditionEvent reports whether NavigateShipOKDataEventsItem is ShipConditionEvent.
+func (s NavigateShipOKDataEventsItem) IsShipConditionEvent() bool {
+	return s.Type == ShipConditionEventNavigateShipOKDataEventsItem
+}
+
+// SetShipConditionEvent sets NavigateShipOKDataEventsItem to ShipConditionEvent.
+func (s *NavigateShipOKDataEventsItem) SetShipConditionEvent(v ShipConditionEvent) {
+	s.Type = ShipConditionEventNavigateShipOKDataEventsItem
+	s.ShipConditionEvent = v
+}
+
+// GetShipConditionEvent returns ShipConditionEvent and true boolean if NavigateShipOKDataEventsItem is ShipConditionEvent.
+func (s NavigateShipOKDataEventsItem) GetShipConditionEvent() (v ShipConditionEvent, ok bool) {
+	if !s.IsShipConditionEvent() {
+		return v, false
+	}
+	return s.ShipConditionEvent, true
+}
+
+// NewShipConditionEventNavigateShipOKDataEventsItem returns new NavigateShipOKDataEventsItem from ShipConditionEvent.
+func NewShipConditionEventNavigateShipOKDataEventsItem(v ShipConditionEvent) NavigateShipOKDataEventsItem {
+	var s NavigateShipOKDataEventsItem
+	s.SetShipConditionEvent(v)
+	return s
 }
 
 type NavigateShipReq struct {
@@ -4308,52 +4517,6 @@ func (o OptSellCargoReq) Or(d SellCargoReq) SellCargoReq {
 	return d
 }
 
-// NewOptShipCondition returns new OptShipCondition with value set to v.
-func NewOptShipCondition(v ShipCondition) OptShipCondition {
-	return OptShipCondition{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptShipCondition is optional ShipCondition.
-type OptShipCondition struct {
-	Value ShipCondition
-	Set   bool
-}
-
-// IsSet returns true if OptShipCondition was set.
-func (o OptShipCondition) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptShipCondition) Reset() {
-	var v ShipCondition
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptShipCondition) SetTo(v ShipCondition) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptShipCondition) Get() (v ShipCondition, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptShipCondition) Or(d ShipCondition) ShipCondition {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptShipFuelConsumed returns new OptShipFuelConsumed with value set to v.
 func NewOptShipFuelConsumed(v ShipFuelConsumed) OptShipFuelConsumed {
 	return OptShipFuelConsumed{
@@ -5337,6 +5500,108 @@ func (s *RemoveMountReq) SetSymbol(val string) {
 	s.Symbol = val
 }
 
+type RepairShipOK struct {
+	Data RepairShipOKData `json:"data"`
+}
+
+// GetData returns the value of Data.
+func (s *RepairShipOK) GetData() RepairShipOKData {
+	return s.Data
+}
+
+// SetData sets the value of Data.
+func (s *RepairShipOK) SetData(val RepairShipOKData) {
+	s.Data = val
+}
+
+type RepairShipOKData struct {
+	Agent       Agent             `json:"agent"`
+	Ship        Ship              `json:"ship"`
+	Transaction RepairTransaction `json:"transaction"`
+}
+
+// GetAgent returns the value of Agent.
+func (s *RepairShipOKData) GetAgent() Agent {
+	return s.Agent
+}
+
+// GetShip returns the value of Ship.
+func (s *RepairShipOKData) GetShip() Ship {
+	return s.Ship
+}
+
+// GetTransaction returns the value of Transaction.
+func (s *RepairShipOKData) GetTransaction() RepairTransaction {
+	return s.Transaction
+}
+
+// SetAgent sets the value of Agent.
+func (s *RepairShipOKData) SetAgent(val Agent) {
+	s.Agent = val
+}
+
+// SetShip sets the value of Ship.
+func (s *RepairShipOKData) SetShip(val Ship) {
+	s.Ship = val
+}
+
+// SetTransaction sets the value of Transaction.
+func (s *RepairShipOKData) SetTransaction(val RepairTransaction) {
+	s.Transaction = val
+}
+
+// Result of a repair transaction.
+// Ref: #/components/schemas/RepairTransaction
+type RepairTransaction struct {
+	WaypointSymbol WaypointSymbol `json:"waypointSymbol"`
+	// The symbol of the ship.
+	ShipSymbol string `json:"shipSymbol"`
+	// The total price of the transaction.
+	TotalPrice int `json:"totalPrice"`
+	// The timestamp of the transaction.
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// GetWaypointSymbol returns the value of WaypointSymbol.
+func (s *RepairTransaction) GetWaypointSymbol() WaypointSymbol {
+	return s.WaypointSymbol
+}
+
+// GetShipSymbol returns the value of ShipSymbol.
+func (s *RepairTransaction) GetShipSymbol() string {
+	return s.ShipSymbol
+}
+
+// GetTotalPrice returns the value of TotalPrice.
+func (s *RepairTransaction) GetTotalPrice() int {
+	return s.TotalPrice
+}
+
+// GetTimestamp returns the value of Timestamp.
+func (s *RepairTransaction) GetTimestamp() time.Time {
+	return s.Timestamp
+}
+
+// SetWaypointSymbol sets the value of WaypointSymbol.
+func (s *RepairTransaction) SetWaypointSymbol(val WaypointSymbol) {
+	s.WaypointSymbol = val
+}
+
+// SetShipSymbol sets the value of ShipSymbol.
+func (s *RepairTransaction) SetShipSymbol(val string) {
+	s.ShipSymbol = val
+}
+
+// SetTotalPrice sets the value of TotalPrice.
+func (s *RepairTransaction) SetTotalPrice(val int) {
+	s.TotalPrice = val
+}
+
+// SetTimestamp sets the value of Timestamp.
+func (s *RepairTransaction) SetTimestamp(val time.Time) {
+	s.Timestamp = val
+}
+
 // The ship that was scanned. Details include information about the ship that could be detected by
 // the scanner.
 // Ref: #/components/schemas/ScannedShip
@@ -5673,6 +5938,97 @@ func (s *ScannedWaypoint) SetChart(val OptChart) {
 	s.Chart = val
 }
 
+type ScrapShipOK struct {
+	Data ScrapShipOKData `json:"data"`
+}
+
+// GetData returns the value of Data.
+func (s *ScrapShipOK) GetData() ScrapShipOKData {
+	return s.Data
+}
+
+// SetData sets the value of Data.
+func (s *ScrapShipOK) SetData(val ScrapShipOKData) {
+	s.Data = val
+}
+
+type ScrapShipOKData struct {
+	Agent       Agent            `json:"agent"`
+	Transaction ScrapTransaction `json:"transaction"`
+}
+
+// GetAgent returns the value of Agent.
+func (s *ScrapShipOKData) GetAgent() Agent {
+	return s.Agent
+}
+
+// GetTransaction returns the value of Transaction.
+func (s *ScrapShipOKData) GetTransaction() ScrapTransaction {
+	return s.Transaction
+}
+
+// SetAgent sets the value of Agent.
+func (s *ScrapShipOKData) SetAgent(val Agent) {
+	s.Agent = val
+}
+
+// SetTransaction sets the value of Transaction.
+func (s *ScrapShipOKData) SetTransaction(val ScrapTransaction) {
+	s.Transaction = val
+}
+
+// Result of a scrap transaction.
+// Ref: #/components/schemas/ScrapTransaction
+type ScrapTransaction struct {
+	WaypointSymbol WaypointSymbol `json:"waypointSymbol"`
+	// The symbol of the ship.
+	ShipSymbol string `json:"shipSymbol"`
+	// The total price of the transaction.
+	TotalPrice int `json:"totalPrice"`
+	// The timestamp of the transaction.
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// GetWaypointSymbol returns the value of WaypointSymbol.
+func (s *ScrapTransaction) GetWaypointSymbol() WaypointSymbol {
+	return s.WaypointSymbol
+}
+
+// GetShipSymbol returns the value of ShipSymbol.
+func (s *ScrapTransaction) GetShipSymbol() string {
+	return s.ShipSymbol
+}
+
+// GetTotalPrice returns the value of TotalPrice.
+func (s *ScrapTransaction) GetTotalPrice() int {
+	return s.TotalPrice
+}
+
+// GetTimestamp returns the value of Timestamp.
+func (s *ScrapTransaction) GetTimestamp() time.Time {
+	return s.Timestamp
+}
+
+// SetWaypointSymbol sets the value of WaypointSymbol.
+func (s *ScrapTransaction) SetWaypointSymbol(val WaypointSymbol) {
+	s.WaypointSymbol = val
+}
+
+// SetShipSymbol sets the value of ShipSymbol.
+func (s *ScrapTransaction) SetShipSymbol(val string) {
+	s.ShipSymbol = val
+}
+
+// SetTotalPrice sets the value of TotalPrice.
+func (s *ScrapTransaction) SetTotalPrice(val int) {
+	s.TotalPrice = val
+}
+
+// SetTimestamp sets the value of Timestamp.
+func (s *ScrapTransaction) SetTimestamp(val time.Time) {
+	s.Timestamp = val
+}
+
 type SellCargoCreated struct {
 	Data SellCargoCreatedData `json:"data"`
 }
@@ -5982,7 +6338,325 @@ func (s *ShipCargoItem) SetUnits(val int) {
 	s.Units = val
 }
 
-type ShipCondition int
+type ShipComponentCondition float64
+
+type ShipComponentIntegrity float64
+
+// An event that represents damage or wear to a ship's reactor, frame, or engine, reducing the
+// condition of the ship.
+// Ref: #/components/schemas/ShipConditionEvent
+type ShipConditionEvent struct {
+	Symbol    ShipConditionEventSymbol    `json:"symbol"`
+	Component ShipConditionEventComponent `json:"component"`
+	// The name of the event.
+	Name string `json:"name"`
+	// A description of the event.
+	Description string `json:"description"`
+}
+
+// GetSymbol returns the value of Symbol.
+func (s *ShipConditionEvent) GetSymbol() ShipConditionEventSymbol {
+	return s.Symbol
+}
+
+// GetComponent returns the value of Component.
+func (s *ShipConditionEvent) GetComponent() ShipConditionEventComponent {
+	return s.Component
+}
+
+// GetName returns the value of Name.
+func (s *ShipConditionEvent) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *ShipConditionEvent) GetDescription() string {
+	return s.Description
+}
+
+// SetSymbol sets the value of Symbol.
+func (s *ShipConditionEvent) SetSymbol(val ShipConditionEventSymbol) {
+	s.Symbol = val
+}
+
+// SetComponent sets the value of Component.
+func (s *ShipConditionEvent) SetComponent(val ShipConditionEventComponent) {
+	s.Component = val
+}
+
+// SetName sets the value of Name.
+func (s *ShipConditionEvent) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *ShipConditionEvent) SetDescription(val string) {
+	s.Description = val
+}
+
+type ShipConditionEventComponent string
+
+const (
+	ShipConditionEventComponentFRAME   ShipConditionEventComponent = "FRAME"
+	ShipConditionEventComponentREACTOR ShipConditionEventComponent = "REACTOR"
+	ShipConditionEventComponentENGINE  ShipConditionEventComponent = "ENGINE"
+)
+
+// AllValues returns all ShipConditionEventComponent values.
+func (ShipConditionEventComponent) AllValues() []ShipConditionEventComponent {
+	return []ShipConditionEventComponent{
+		ShipConditionEventComponentFRAME,
+		ShipConditionEventComponentREACTOR,
+		ShipConditionEventComponentENGINE,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ShipConditionEventComponent) MarshalText() ([]byte, error) {
+	switch s {
+	case ShipConditionEventComponentFRAME:
+		return []byte(s), nil
+	case ShipConditionEventComponentREACTOR:
+		return []byte(s), nil
+	case ShipConditionEventComponentENGINE:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ShipConditionEventComponent) UnmarshalText(data []byte) error {
+	switch ShipConditionEventComponent(data) {
+	case ShipConditionEventComponentFRAME:
+		*s = ShipConditionEventComponentFRAME
+		return nil
+	case ShipConditionEventComponentREACTOR:
+		*s = ShipConditionEventComponentREACTOR
+		return nil
+	case ShipConditionEventComponentENGINE:
+		*s = ShipConditionEventComponentENGINE
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ShipConditionEventSymbol string
+
+const (
+	ShipConditionEventSymbolREACTOROVERLOAD                  ShipConditionEventSymbol = "REACTOR_OVERLOAD"
+	ShipConditionEventSymbolENERGYSPIKEFROMMINERAL           ShipConditionEventSymbol = "ENERGY_SPIKE_FROM_MINERAL"
+	ShipConditionEventSymbolSOLARFLAREINTERFERENCE           ShipConditionEventSymbol = "SOLAR_FLARE_INTERFERENCE"
+	ShipConditionEventSymbolCOOLANTLEAK                      ShipConditionEventSymbol = "COOLANT_LEAK"
+	ShipConditionEventSymbolPOWERDISTRIBUTIONFLUCTUATION     ShipConditionEventSymbol = "POWER_DISTRIBUTION_FLUCTUATION"
+	ShipConditionEventSymbolMAGNETICFIELDDISRUPTION          ShipConditionEventSymbol = "MAGNETIC_FIELD_DISRUPTION"
+	ShipConditionEventSymbolHULLMICROMETEORITESTRIKES        ShipConditionEventSymbol = "HULL_MICROMETEORITE_STRIKES"
+	ShipConditionEventSymbolSTRUCTURALSTRESSFRACTURES        ShipConditionEventSymbol = "STRUCTURAL_STRESS_FRACTURES"
+	ShipConditionEventSymbolCORROSIVEMINERALCONTAMINATION    ShipConditionEventSymbol = "CORROSIVE_MINERAL_CONTAMINATION"
+	ShipConditionEventSymbolTHERMALEXPANSIONMISMATCH         ShipConditionEventSymbol = "THERMAL_EXPANSION_MISMATCH"
+	ShipConditionEventSymbolVIBRATIONDAMAGEFROMDRILLING      ShipConditionEventSymbol = "VIBRATION_DAMAGE_FROM_DRILLING"
+	ShipConditionEventSymbolELECTROMAGNETICFIELDINTERFERENCE ShipConditionEventSymbol = "ELECTROMAGNETIC_FIELD_INTERFERENCE"
+	ShipConditionEventSymbolIMPACTWITHEXTRACTEDDEBRIS        ShipConditionEventSymbol = "IMPACT_WITH_EXTRACTED_DEBRIS"
+	ShipConditionEventSymbolFUELEFFICIENCYDEGRADATION        ShipConditionEventSymbol = "FUEL_EFFICIENCY_DEGRADATION"
+	ShipConditionEventSymbolCOOLANTSYSTEMAGEING              ShipConditionEventSymbol = "COOLANT_SYSTEM_AGEING"
+	ShipConditionEventSymbolDUSTMICROABRASIONS               ShipConditionEventSymbol = "DUST_MICROABRASIONS"
+	ShipConditionEventSymbolTHRUSTERNOZZLEWEAR               ShipConditionEventSymbol = "THRUSTER_NOZZLE_WEAR"
+	ShipConditionEventSymbolEXHAUSTPORTCLOGGING              ShipConditionEventSymbol = "EXHAUST_PORT_CLOGGING"
+	ShipConditionEventSymbolBEARINGLUBRICATIONFADE           ShipConditionEventSymbol = "BEARING_LUBRICATION_FADE"
+	ShipConditionEventSymbolSENSORCALIBRATIONDRIFT           ShipConditionEventSymbol = "SENSOR_CALIBRATION_DRIFT"
+	ShipConditionEventSymbolHULLMICROMETEORITEDAMAGE         ShipConditionEventSymbol = "HULL_MICROMETEORITE_DAMAGE"
+	ShipConditionEventSymbolSPACEDEBRISCOLLISION             ShipConditionEventSymbol = "SPACE_DEBRIS_COLLISION"
+	ShipConditionEventSymbolTHERMALSTRESS                    ShipConditionEventSymbol = "THERMAL_STRESS"
+	ShipConditionEventSymbolVIBRATIONOVERLOAD                ShipConditionEventSymbol = "VIBRATION_OVERLOAD"
+	ShipConditionEventSymbolPRESSUREDIFFERENTIALSTRESS       ShipConditionEventSymbol = "PRESSURE_DIFFERENTIAL_STRESS"
+	ShipConditionEventSymbolELECTROMAGNETICSURGEEFFECTS      ShipConditionEventSymbol = "ELECTROMAGNETIC_SURGE_EFFECTS"
+	ShipConditionEventSymbolATMOSPHERICENTRYHEAT             ShipConditionEventSymbol = "ATMOSPHERIC_ENTRY_HEAT"
+)
+
+// AllValues returns all ShipConditionEventSymbol values.
+func (ShipConditionEventSymbol) AllValues() []ShipConditionEventSymbol {
+	return []ShipConditionEventSymbol{
+		ShipConditionEventSymbolREACTOROVERLOAD,
+		ShipConditionEventSymbolENERGYSPIKEFROMMINERAL,
+		ShipConditionEventSymbolSOLARFLAREINTERFERENCE,
+		ShipConditionEventSymbolCOOLANTLEAK,
+		ShipConditionEventSymbolPOWERDISTRIBUTIONFLUCTUATION,
+		ShipConditionEventSymbolMAGNETICFIELDDISRUPTION,
+		ShipConditionEventSymbolHULLMICROMETEORITESTRIKES,
+		ShipConditionEventSymbolSTRUCTURALSTRESSFRACTURES,
+		ShipConditionEventSymbolCORROSIVEMINERALCONTAMINATION,
+		ShipConditionEventSymbolTHERMALEXPANSIONMISMATCH,
+		ShipConditionEventSymbolVIBRATIONDAMAGEFROMDRILLING,
+		ShipConditionEventSymbolELECTROMAGNETICFIELDINTERFERENCE,
+		ShipConditionEventSymbolIMPACTWITHEXTRACTEDDEBRIS,
+		ShipConditionEventSymbolFUELEFFICIENCYDEGRADATION,
+		ShipConditionEventSymbolCOOLANTSYSTEMAGEING,
+		ShipConditionEventSymbolDUSTMICROABRASIONS,
+		ShipConditionEventSymbolTHRUSTERNOZZLEWEAR,
+		ShipConditionEventSymbolEXHAUSTPORTCLOGGING,
+		ShipConditionEventSymbolBEARINGLUBRICATIONFADE,
+		ShipConditionEventSymbolSENSORCALIBRATIONDRIFT,
+		ShipConditionEventSymbolHULLMICROMETEORITEDAMAGE,
+		ShipConditionEventSymbolSPACEDEBRISCOLLISION,
+		ShipConditionEventSymbolTHERMALSTRESS,
+		ShipConditionEventSymbolVIBRATIONOVERLOAD,
+		ShipConditionEventSymbolPRESSUREDIFFERENTIALSTRESS,
+		ShipConditionEventSymbolELECTROMAGNETICSURGEEFFECTS,
+		ShipConditionEventSymbolATMOSPHERICENTRYHEAT,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ShipConditionEventSymbol) MarshalText() ([]byte, error) {
+	switch s {
+	case ShipConditionEventSymbolREACTOROVERLOAD:
+		return []byte(s), nil
+	case ShipConditionEventSymbolENERGYSPIKEFROMMINERAL:
+		return []byte(s), nil
+	case ShipConditionEventSymbolSOLARFLAREINTERFERENCE:
+		return []byte(s), nil
+	case ShipConditionEventSymbolCOOLANTLEAK:
+		return []byte(s), nil
+	case ShipConditionEventSymbolPOWERDISTRIBUTIONFLUCTUATION:
+		return []byte(s), nil
+	case ShipConditionEventSymbolMAGNETICFIELDDISRUPTION:
+		return []byte(s), nil
+	case ShipConditionEventSymbolHULLMICROMETEORITESTRIKES:
+		return []byte(s), nil
+	case ShipConditionEventSymbolSTRUCTURALSTRESSFRACTURES:
+		return []byte(s), nil
+	case ShipConditionEventSymbolCORROSIVEMINERALCONTAMINATION:
+		return []byte(s), nil
+	case ShipConditionEventSymbolTHERMALEXPANSIONMISMATCH:
+		return []byte(s), nil
+	case ShipConditionEventSymbolVIBRATIONDAMAGEFROMDRILLING:
+		return []byte(s), nil
+	case ShipConditionEventSymbolELECTROMAGNETICFIELDINTERFERENCE:
+		return []byte(s), nil
+	case ShipConditionEventSymbolIMPACTWITHEXTRACTEDDEBRIS:
+		return []byte(s), nil
+	case ShipConditionEventSymbolFUELEFFICIENCYDEGRADATION:
+		return []byte(s), nil
+	case ShipConditionEventSymbolCOOLANTSYSTEMAGEING:
+		return []byte(s), nil
+	case ShipConditionEventSymbolDUSTMICROABRASIONS:
+		return []byte(s), nil
+	case ShipConditionEventSymbolTHRUSTERNOZZLEWEAR:
+		return []byte(s), nil
+	case ShipConditionEventSymbolEXHAUSTPORTCLOGGING:
+		return []byte(s), nil
+	case ShipConditionEventSymbolBEARINGLUBRICATIONFADE:
+		return []byte(s), nil
+	case ShipConditionEventSymbolSENSORCALIBRATIONDRIFT:
+		return []byte(s), nil
+	case ShipConditionEventSymbolHULLMICROMETEORITEDAMAGE:
+		return []byte(s), nil
+	case ShipConditionEventSymbolSPACEDEBRISCOLLISION:
+		return []byte(s), nil
+	case ShipConditionEventSymbolTHERMALSTRESS:
+		return []byte(s), nil
+	case ShipConditionEventSymbolVIBRATIONOVERLOAD:
+		return []byte(s), nil
+	case ShipConditionEventSymbolPRESSUREDIFFERENTIALSTRESS:
+		return []byte(s), nil
+	case ShipConditionEventSymbolELECTROMAGNETICSURGEEFFECTS:
+		return []byte(s), nil
+	case ShipConditionEventSymbolATMOSPHERICENTRYHEAT:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ShipConditionEventSymbol) UnmarshalText(data []byte) error {
+	switch ShipConditionEventSymbol(data) {
+	case ShipConditionEventSymbolREACTOROVERLOAD:
+		*s = ShipConditionEventSymbolREACTOROVERLOAD
+		return nil
+	case ShipConditionEventSymbolENERGYSPIKEFROMMINERAL:
+		*s = ShipConditionEventSymbolENERGYSPIKEFROMMINERAL
+		return nil
+	case ShipConditionEventSymbolSOLARFLAREINTERFERENCE:
+		*s = ShipConditionEventSymbolSOLARFLAREINTERFERENCE
+		return nil
+	case ShipConditionEventSymbolCOOLANTLEAK:
+		*s = ShipConditionEventSymbolCOOLANTLEAK
+		return nil
+	case ShipConditionEventSymbolPOWERDISTRIBUTIONFLUCTUATION:
+		*s = ShipConditionEventSymbolPOWERDISTRIBUTIONFLUCTUATION
+		return nil
+	case ShipConditionEventSymbolMAGNETICFIELDDISRUPTION:
+		*s = ShipConditionEventSymbolMAGNETICFIELDDISRUPTION
+		return nil
+	case ShipConditionEventSymbolHULLMICROMETEORITESTRIKES:
+		*s = ShipConditionEventSymbolHULLMICROMETEORITESTRIKES
+		return nil
+	case ShipConditionEventSymbolSTRUCTURALSTRESSFRACTURES:
+		*s = ShipConditionEventSymbolSTRUCTURALSTRESSFRACTURES
+		return nil
+	case ShipConditionEventSymbolCORROSIVEMINERALCONTAMINATION:
+		*s = ShipConditionEventSymbolCORROSIVEMINERALCONTAMINATION
+		return nil
+	case ShipConditionEventSymbolTHERMALEXPANSIONMISMATCH:
+		*s = ShipConditionEventSymbolTHERMALEXPANSIONMISMATCH
+		return nil
+	case ShipConditionEventSymbolVIBRATIONDAMAGEFROMDRILLING:
+		*s = ShipConditionEventSymbolVIBRATIONDAMAGEFROMDRILLING
+		return nil
+	case ShipConditionEventSymbolELECTROMAGNETICFIELDINTERFERENCE:
+		*s = ShipConditionEventSymbolELECTROMAGNETICFIELDINTERFERENCE
+		return nil
+	case ShipConditionEventSymbolIMPACTWITHEXTRACTEDDEBRIS:
+		*s = ShipConditionEventSymbolIMPACTWITHEXTRACTEDDEBRIS
+		return nil
+	case ShipConditionEventSymbolFUELEFFICIENCYDEGRADATION:
+		*s = ShipConditionEventSymbolFUELEFFICIENCYDEGRADATION
+		return nil
+	case ShipConditionEventSymbolCOOLANTSYSTEMAGEING:
+		*s = ShipConditionEventSymbolCOOLANTSYSTEMAGEING
+		return nil
+	case ShipConditionEventSymbolDUSTMICROABRASIONS:
+		*s = ShipConditionEventSymbolDUSTMICROABRASIONS
+		return nil
+	case ShipConditionEventSymbolTHRUSTERNOZZLEWEAR:
+		*s = ShipConditionEventSymbolTHRUSTERNOZZLEWEAR
+		return nil
+	case ShipConditionEventSymbolEXHAUSTPORTCLOGGING:
+		*s = ShipConditionEventSymbolEXHAUSTPORTCLOGGING
+		return nil
+	case ShipConditionEventSymbolBEARINGLUBRICATIONFADE:
+		*s = ShipConditionEventSymbolBEARINGLUBRICATIONFADE
+		return nil
+	case ShipConditionEventSymbolSENSORCALIBRATIONDRIFT:
+		*s = ShipConditionEventSymbolSENSORCALIBRATIONDRIFT
+		return nil
+	case ShipConditionEventSymbolHULLMICROMETEORITEDAMAGE:
+		*s = ShipConditionEventSymbolHULLMICROMETEORITEDAMAGE
+		return nil
+	case ShipConditionEventSymbolSPACEDEBRISCOLLISION:
+		*s = ShipConditionEventSymbolSPACEDEBRISCOLLISION
+		return nil
+	case ShipConditionEventSymbolTHERMALSTRESS:
+		*s = ShipConditionEventSymbolTHERMALSTRESS
+		return nil
+	case ShipConditionEventSymbolVIBRATIONOVERLOAD:
+		*s = ShipConditionEventSymbolVIBRATIONOVERLOAD
+		return nil
+	case ShipConditionEventSymbolPRESSUREDIFFERENTIALSTRESS:
+		*s = ShipConditionEventSymbolPRESSUREDIFFERENTIALSTRESS
+		return nil
+	case ShipConditionEventSymbolELECTROMAGNETICSURGEEFFECTS:
+		*s = ShipConditionEventSymbolELECTROMAGNETICSURGEEFFECTS
+		return nil
+	case ShipConditionEventSymbolATMOSPHERICENTRYHEAT:
+		*s = ShipConditionEventSymbolATMOSPHERICENTRYHEAT
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 // The ship's crew service and maintain the ship's systems and equipment.
 // Ref: #/components/schemas/ShipCrew
@@ -6115,8 +6789,9 @@ type ShipEngine struct {
 	// The name of the engine.
 	Name string `json:"name"`
 	// The description of the engine.
-	Description string           `json:"description"`
-	Condition   OptShipCondition `json:"condition"`
+	Description string                 `json:"description"`
+	Condition   ShipComponentCondition `json:"condition"`
+	Integrity   ShipComponentIntegrity `json:"integrity"`
 	// The speed stat of this engine. The higher the speed, the faster a ship can travel from one point
 	// to another. Reduces the time of arrival when navigating the ship.
 	Speed        int              `json:"speed"`
@@ -6139,8 +6814,13 @@ func (s *ShipEngine) GetDescription() string {
 }
 
 // GetCondition returns the value of Condition.
-func (s *ShipEngine) GetCondition() OptShipCondition {
+func (s *ShipEngine) GetCondition() ShipComponentCondition {
 	return s.Condition
+}
+
+// GetIntegrity returns the value of Integrity.
+func (s *ShipEngine) GetIntegrity() ShipComponentIntegrity {
+	return s.Integrity
 }
 
 // GetSpeed returns the value of Speed.
@@ -6169,8 +6849,13 @@ func (s *ShipEngine) SetDescription(val string) {
 }
 
 // SetCondition sets the value of Condition.
-func (s *ShipEngine) SetCondition(val OptShipCondition) {
+func (s *ShipEngine) SetCondition(val ShipComponentCondition) {
 	s.Condition = val
+}
+
+// SetIntegrity sets the value of Integrity.
+func (s *ShipEngine) SetIntegrity(val ShipComponentIntegrity) {
+	s.Integrity = val
 }
 
 // SetSpeed sets the value of Speed.
@@ -6249,8 +6934,9 @@ type ShipFrame struct {
 	// Name of the frame.
 	Name string `json:"name"`
 	// Description of the frame.
-	Description string           `json:"description"`
-	Condition   OptShipCondition `json:"condition"`
+	Description string                 `json:"description"`
+	Condition   ShipComponentCondition `json:"condition"`
+	Integrity   ShipComponentIntegrity `json:"integrity"`
 	// The amount of slots that can be dedicated to modules installed in the ship. Each installed module
 	// take up a number of slots, and once there are no more slots, no new modules can be installed.
 	ModuleSlots int `json:"moduleSlots"`
@@ -6280,8 +6966,13 @@ func (s *ShipFrame) GetDescription() string {
 }
 
 // GetCondition returns the value of Condition.
-func (s *ShipFrame) GetCondition() OptShipCondition {
+func (s *ShipFrame) GetCondition() ShipComponentCondition {
 	return s.Condition
+}
+
+// GetIntegrity returns the value of Integrity.
+func (s *ShipFrame) GetIntegrity() ShipComponentIntegrity {
+	return s.Integrity
 }
 
 // GetModuleSlots returns the value of ModuleSlots.
@@ -6320,8 +7011,13 @@ func (s *ShipFrame) SetDescription(val string) {
 }
 
 // SetCondition sets the value of Condition.
-func (s *ShipFrame) SetCondition(val OptShipCondition) {
+func (s *ShipFrame) SetCondition(val ShipComponentCondition) {
 	s.Condition = val
+}
+
+// SetIntegrity sets the value of Integrity.
+func (s *ShipFrame) SetIntegrity(val ShipComponentIntegrity) {
+	s.Integrity = val
 }
 
 // SetModuleSlots sets the value of ModuleSlots.
@@ -7486,8 +8182,9 @@ type ShipReactor struct {
 	// Name of the reactor.
 	Name string `json:"name"`
 	// Description of the reactor.
-	Description string           `json:"description"`
-	Condition   OptShipCondition `json:"condition"`
+	Description string                 `json:"description"`
+	Condition   ShipComponentCondition `json:"condition"`
+	Integrity   ShipComponentIntegrity `json:"integrity"`
 	// The amount of power provided by this reactor. The more power a reactor provides to the ship, the
 	// lower the cooldown it gets when using a module or mount that taxes the ship's power.
 	PowerOutput  int              `json:"powerOutput"`
@@ -7510,8 +8207,13 @@ func (s *ShipReactor) GetDescription() string {
 }
 
 // GetCondition returns the value of Condition.
-func (s *ShipReactor) GetCondition() OptShipCondition {
+func (s *ShipReactor) GetCondition() ShipComponentCondition {
 	return s.Condition
+}
+
+// GetIntegrity returns the value of Integrity.
+func (s *ShipReactor) GetIntegrity() ShipComponentIntegrity {
+	return s.Integrity
 }
 
 // GetPowerOutput returns the value of PowerOutput.
@@ -7540,8 +8242,13 @@ func (s *ShipReactor) SetDescription(val string) {
 }
 
 // SetCondition sets the value of Condition.
-func (s *ShipReactor) SetCondition(val OptShipCondition) {
+func (s *ShipReactor) SetCondition(val ShipComponentCondition) {
 	s.Condition = val
+}
+
+// SetIntegrity sets the value of Integrity.
+func (s *ShipReactor) SetIntegrity(val ShipComponentIntegrity) {
+	s.Integrity = val
 }
 
 // SetPowerOutput sets the value of PowerOutput.
@@ -8523,9 +9230,10 @@ func (s *SiphonResourcesCreated) SetData(val SiphonResourcesCreatedData) {
 }
 
 type SiphonResourcesCreatedData struct {
-	Cooldown Cooldown  `json:"cooldown"`
-	Siphon   Siphon    `json:"siphon"`
-	Cargo    ShipCargo `json:"cargo"`
+	Cooldown Cooldown                               `json:"cooldown"`
+	Siphon   Siphon                                 `json:"siphon"`
+	Cargo    ShipCargo                              `json:"cargo"`
+	Events   []SiphonResourcesCreatedDataEventsItem `json:"events"`
 }
 
 // GetCooldown returns the value of Cooldown.
@@ -8543,6 +9251,11 @@ func (s *SiphonResourcesCreatedData) GetCargo() ShipCargo {
 	return s.Cargo
 }
 
+// GetEvents returns the value of Events.
+func (s *SiphonResourcesCreatedData) GetEvents() []SiphonResourcesCreatedDataEventsItem {
+	return s.Events
+}
+
 // SetCooldown sets the value of Cooldown.
 func (s *SiphonResourcesCreatedData) SetCooldown(val Cooldown) {
 	s.Cooldown = val
@@ -8556,6 +9269,51 @@ func (s *SiphonResourcesCreatedData) SetSiphon(val Siphon) {
 // SetCargo sets the value of Cargo.
 func (s *SiphonResourcesCreatedData) SetCargo(val ShipCargo) {
 	s.Cargo = val
+}
+
+// SetEvents sets the value of Events.
+func (s *SiphonResourcesCreatedData) SetEvents(val []SiphonResourcesCreatedDataEventsItem) {
+	s.Events = val
+}
+
+// SiphonResourcesCreatedDataEventsItem represents sum type.
+type SiphonResourcesCreatedDataEventsItem struct {
+	Type               SiphonResourcesCreatedDataEventsItemType // switch on this field
+	ShipConditionEvent ShipConditionEvent
+}
+
+// SiphonResourcesCreatedDataEventsItemType is oneOf type of SiphonResourcesCreatedDataEventsItem.
+type SiphonResourcesCreatedDataEventsItemType string
+
+// Possible values for SiphonResourcesCreatedDataEventsItemType.
+const (
+	ShipConditionEventSiphonResourcesCreatedDataEventsItem SiphonResourcesCreatedDataEventsItemType = "ShipConditionEvent"
+)
+
+// IsShipConditionEvent reports whether SiphonResourcesCreatedDataEventsItem is ShipConditionEvent.
+func (s SiphonResourcesCreatedDataEventsItem) IsShipConditionEvent() bool {
+	return s.Type == ShipConditionEventSiphonResourcesCreatedDataEventsItem
+}
+
+// SetShipConditionEvent sets SiphonResourcesCreatedDataEventsItem to ShipConditionEvent.
+func (s *SiphonResourcesCreatedDataEventsItem) SetShipConditionEvent(v ShipConditionEvent) {
+	s.Type = ShipConditionEventSiphonResourcesCreatedDataEventsItem
+	s.ShipConditionEvent = v
+}
+
+// GetShipConditionEvent returns ShipConditionEvent and true boolean if SiphonResourcesCreatedDataEventsItem is ShipConditionEvent.
+func (s SiphonResourcesCreatedDataEventsItem) GetShipConditionEvent() (v ShipConditionEvent, ok bool) {
+	if !s.IsShipConditionEvent() {
+		return v, false
+	}
+	return s.ShipConditionEvent, true
+}
+
+// NewShipConditionEventSiphonResourcesCreatedDataEventsItem returns new SiphonResourcesCreatedDataEventsItem from ShipConditionEvent.
+func NewShipConditionEventSiphonResourcesCreatedDataEventsItem(v ShipConditionEvent) SiphonResourcesCreatedDataEventsItem {
+	var s SiphonResourcesCreatedDataEventsItem
+	s.SetShipConditionEvent(v)
+	return s
 }
 
 // A yield from the siphon operation.

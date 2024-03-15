@@ -91,7 +91,7 @@ func ScanMarkets(client *api.Client, repo *repo.Repo, system string) error {
 
 	for _, wp := range waypoints {
 		ScanMarket(client, repo, wp)
-		time.Sleep(2 * time.Second)
+		time.Sleep(1500 * time.Millisecond)
 	}
 
 	return nil

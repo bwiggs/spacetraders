@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/bwiggs/spacetraders-go/api"
@@ -11,35 +12,56 @@ import (
 )
 
 type Ship struct {
-	state   *api.Ship
-	symbol  string
-	mission Mission
-	log     *slog.Logger
-	client  *api.Client
+	state        *api.Ship
+	symbol       string
+	mission      Mission
+	log          *slog.Logger
+	client       *api.Client
+	transferLock sync.Mutex
 }
 
 func NewShip(ship *api.Ship, client *api.Client) *Ship {
 	s := &Ship{
-		symbol: ship.Symbol,
-		state:  ship,
-		client: client,
-		log:    slog.With("ship", ship.Symbol),
+		symbol:       ship.Symbol,
+		state:        ship,
+		client:       client,
+		log:          slog.With("ship", ship.Symbol),
+		transferLock: sync.Mutex{},
 	}
 
 	go func(ship *Ship) {
-		ship.log.Debug("spinning up ship loop")
 		for {
+			ship.Wait()
 			if ship.mission != nil {
-				ship.mission.Execute(s)
-				ship.Cooldown()
+				data := Blackboard{ship: ship, log: slog.With("ship", ship.symbol)}
+				ship.mission.Execute(data)
 			} else {
 				ship.log.Info("idling - no current mission")
 			}
-			time.Sleep(3 * time.Second)
 		}
 	}(s)
 
 	return s
+}
+
+func (s *Ship) Wait() {
+	var dur time.Duration
+
+	arrivalTime := time.Until(s.state.Nav.Route.Arrival)
+	cooldownTime := time.Until(s.state.Cooldown.Expiration.Value)
+
+	if arrivalTime > 0 {
+		dest := s.state.Nav.Route.Destination.Symbol
+		dur = arrivalTime
+		s.log.Info(fmt.Sprintf("%s: transit: %s %s", s.symbol, dest, dur), "route.dest", dest)
+	} else if cooldownTime > 0 {
+		dur = cooldownTime
+		s.log.Info(fmt.Sprintf("%s: cooldown: %s", s.symbol, dur))
+	} else {
+		dur = 1500 * time.Millisecond
+	}
+
+	time.Sleep(dur)
 }
 
 func (s *Ship) SetMission(mission Mission) {
@@ -56,9 +78,13 @@ func (s *Ship) Deliver(contractID, good string) (*api.Contract, error) {
 	}
 
 	ownedUnits := s.CountInventoryBySymbol(good)
+	s.log.Debug(fmt.Sprintf("ship has %d units of %s", ownedUnits, good))
+	if ownedUnits == 0 {
+		s.log.Debug("no units to deliver")
+		return nil, nil
+	}
 
 	dcr := api.DeliverContractReq{ShipSymbol: s.symbol, TradeSymbol: good, Units: ownedUnits}
-
 	sres, err := s.client.DeliverContract(
 		context.TODO(),
 		api.NewOptDeliverContractReq(dcr),
@@ -71,6 +97,54 @@ func (s *Ship) Deliver(contractID, good string) (*api.Contract, error) {
 	s.state.Cargo = sres.Data.Cargo
 
 	return &sres.Data.Contract, nil
+}
+
+func (s *Ship) SellCargo() error {
+	res, err := s.client.GetMarket(
+		context.TODO(),
+		api.GetMarketParams{SystemSymbol: s.CurrWaypoint()[:7], WaypointSymbol: s.CurrWaypoint()},
+	)
+	if err != nil {
+		return errors.Wrap(err, "Selling: Failed to get market info")
+	}
+
+	marketItems := make(map[string]int)
+	for _, i := range res.Data.TradeGoods {
+		if i.TradeVolume == 0 {
+			continue
+		}
+		marketItems[string(i.Symbol)] = i.TradeVolume
+	}
+
+	for _, inv := range s.state.Cargo.Inventory {
+		good := string(inv.Symbol)
+		vol, hasItem := marketItems[good]
+		if !hasItem {
+			continue
+		}
+
+		units := min(inv.Units, vol)
+		s.log.Info(fmt.Sprintf("Selling %d %s", units, good))
+
+		sres, err := s.client.SellCargo(
+			context.TODO(),
+			api.NewOptSellCargoReq(api.SellCargoReq{
+				Symbol: api.TradeSymbol(good),
+				Units:  units,
+			}),
+			api.SellCargoParams{ShipSymbol: s.symbol},
+		)
+		if err != nil {
+			return errors.Wrap(err, "Sell failed")
+		}
+
+		t := sres.Data.Transaction
+
+		s.log.Info(fmt.Sprintf("Transaction: Sell: $(%+d) %s (%d x $%d)", t.TotalPrice, t.TradeSymbol, t.Units, t.PricePerUnit))
+		s.state.Cargo = sres.Data.Cargo
+	}
+
+	return nil
 }
 
 func (s *Ship) Sell(good string) error {
@@ -129,19 +203,15 @@ func (s *Ship) Sell(good string) error {
 	return nil
 }
 
-func (s *Ship) Buy(good string, wp string) error {
+func (s *Ship) Buy(good string, maxUnits int, wp string) error {
 	s.log.Info("Buying " + good)
-	if !s.IsDocked() {
-		if err := s.Dock(); err != nil {
-			return errors.Wrap(err, "Undock failed")
-		}
-	}
 
 	for {
 
 		cargoSpace := s.state.Cargo.Capacity - s.state.Cargo.Units
 
 		if cargoSpace == 0 {
+			s.log.Debug("Cargo full, cant buy any more goods")
 			break
 		}
 
@@ -166,7 +236,7 @@ func (s *Ship) Buy(good string, wp string) error {
 			break
 		}
 
-		units := min(cargoSpace, availableUnits)
+		units := min(cargoSpace, availableUnits, maxUnits)
 		s.log.Info(fmt.Sprintf("Buying %d units", units))
 
 		pres, err := s.client.PurchaseCargo(
@@ -187,15 +257,62 @@ func (s *Ship) Buy(good string, wp string) error {
 	return nil
 }
 
-func (s *Ship) Transit(dest string) error {
-	s.log.Debug("Transiting " + dest)
+func (s *Ship) GetCargoItemBySymbol(good api.TradeSymbol) (api.ShipCargoItem, bool) {
+	for _, inv := range s.state.Cargo.Inventory {
+		if inv.Symbol == good {
+			return inv, true
+		}
+	}
+	return api.ShipCargoItem{}, false
+}
 
+func (s *Ship) ReceiveTransfer(from *Ship, tradeGoodSymbol api.TradeSymbol, maxUnits int) (bool, error) {
+	if s.IsCargoFull() {
+		s.log.Info("cargo full")
+		return false, nil
+	}
+
+	item, found := from.GetCargoItemBySymbol(tradeGoodSymbol)
+	if !found {
+		return false, nil
+	}
+
+	s.transferLock.Lock()
+	defer s.transferLock.Unlock()
+
+	units := min(item.Units, s.AvailableCargoUnits())
+	if maxUnits > 0 {
+		units = min(units, maxUnits)
+	}
+
+	res, err := s.client.TransferCargo(
+		context.TODO(),
+		api.NewOptTransferCargoReq(api.TransferCargoReq{
+			TradeSymbol: item.Symbol,
+			Units:       units,
+			ShipSymbol:  s.symbol,
+		}),
+		api.TransferCargoParams{ShipSymbol: from.symbol},
+	)
+	if err != nil {
+		return false, err
+	}
+
+	from.state.Cargo = res.Data.Cargo
+	s.state.Cargo.Units += units
+
+	s.log.Info("transfer received", "cargo.units", s.state.Cargo.Units, "transfer.from", from.symbol, "transfer.units", units, "transfer.good", item.Symbol)
+
+	return true, nil
+}
+
+func (s *Ship) Transit(dest string) error {
 	if s.CurrWaypoint() == dest {
 		return nil
 	}
 
 	if s.IsDocked() {
-		if err := s.Undock(); err != nil {
+		if err := s.Orbit(); err != nil {
 			return errors.Wrap(err, "Undock failed")
 		}
 	}
@@ -210,9 +327,8 @@ func (s *Ship) Transit(dest string) error {
 	s.state.Fuel = res.Data.Fuel
 	s.state.Nav = res.Data.Nav
 
-	travelDuration := time.Until(s.state.Nav.Route.Arrival)
-	s.log.Info(fmt.Sprintf("transitting to %s - %f seconds. sleeping", dest, travelDuration.Seconds()), "dest", dest)
-	time.Sleep(travelDuration)
+	dur := time.Until(s.state.Nav.Route.Arrival)
+	s.log.Info("transiting", "nav.route.dest", dest, "nav.route.arrival", dur)
 	return nil
 }
 
@@ -222,7 +338,7 @@ func (s *Ship) Survey() ([]api.Survey, error) {
 	}
 
 	if s.IsDocked() {
-		if err := s.Undock(); err != nil {
+		if err := s.Orbit(); err != nil {
 			return nil, errors.Wrap(err, "Undock failed")
 		}
 	}
@@ -250,11 +366,11 @@ func (s *Ship) Dock() error {
 	return nil
 }
 
-func (s *Ship) Undock() error {
-	s.log.Info("Undocking")
+func (s *Ship) Orbit() error {
+	s.log.Info("Orbiting")
 	res, err := s.client.OrbitShip(context.TODO(), api.OrbitShipParams{ShipSymbol: s.symbol})
 	if err != nil {
-		return errors.Wrap(err, "Undock failed")
+		return errors.Wrap(err, "Orbit failed")
 	}
 
 	s.state.Nav = res.Data.Nav
@@ -263,15 +379,11 @@ func (s *Ship) Undock() error {
 }
 
 func (s *Ship) Refuel() error {
-	s.log.Debug("Refueling")
 	units := s.state.Fuel.Capacity - s.state.Fuel.Current
 
 	if units <= 0 {
-		s.log.Debug("Refueling: tanks full")
 		return nil
 	}
-
-	s.log.Info(fmt.Sprintf("Refueling: %d units", units))
 
 	if !s.IsDocked() {
 		if err := s.Dock(); err != nil {
@@ -286,8 +398,17 @@ func (s *Ship) Refuel() error {
 	}
 
 	s.state.Fuel = res.Data.Fuel
+	s.log.Info(fmt.Sprintf("Refueled: $%d (%d x $%d)", res.Data.Transaction.TotalPrice, units, res.Data.Transaction.PricePerUnit))
 
 	return nil
+}
+
+func (s *Ship) AvailableCargoUnits() int {
+	return s.state.Cargo.Capacity - s.state.Cargo.Units
+}
+
+func (s *Ship) HasFreeCargoSpace() bool {
+	return s.AvailableCargoUnits() > 0
 }
 
 func (s *Ship) At(wp string) bool {
@@ -296,14 +417,18 @@ func (s *Ship) At(wp string) bool {
 
 func (s *Ship) Jettison(good string) error {
 	if s.IsDocked() {
-		if err := s.Undock(); err != nil {
+		if err := s.Orbit(); err != nil {
 			return errors.Wrap(err, "Undock failed")
 		}
 	}
 
 	units := s.CountInventoryBySymbol(good)
 
-	s.log.Info(fmt.Sprintf("Jettison: %d %s", units, good))
+	if units <= 0 {
+		return nil
+	}
+
+	l := s.log.With("good", good, "units", units)
 
 	res, err := s.client.Jettison(
 		context.TODO(),
@@ -311,8 +436,10 @@ func (s *Ship) Jettison(good string) error {
 		api.JettisonParams{ShipSymbol: s.symbol},
 	)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "jettison failed:")
 	}
+
+	l.Info("jettisoned")
 
 	s.state.Cargo = res.Data.Cargo
 
@@ -337,7 +464,7 @@ func (s *Ship) CurrWaypoint() string {
 }
 
 func (s *Ship) IsCargoFull() bool {
-	return s.state.Cargo.Units == s.state.Cargo.Capacity
+	return s.state.Cargo.Units >= s.state.Cargo.Capacity
 }
 
 func (s *Ship) IsCargoEmpty() bool {
@@ -348,61 +475,57 @@ func (s *Ship) IsDocked() bool {
 	return s.state.Nav.Status == api.ShipNavStatusDOCKED
 }
 
+func (s *Ship) IsIdle() bool {
+	return !(s.InTransit() || s.InCooldown())
+}
+
 func (s *Ship) InTransit() bool {
-	return s.state.Nav.Status == api.ShipNavStatusINTRANSIT
+	return s.state.Nav.Route.Arrival.After(time.Now())
 }
 
 func (s *Ship) Cooldown() {
 	t := time.Duration(s.state.Cooldown.RemainingSeconds)
 	if t > 0 {
-		s.log.Info(fmt.Sprintf("cooling down: %d sec", t))
+		s.log.Info(fmt.Sprintf("Cooldown: sleeping: %s", t))
 		time.Sleep(t * time.Second)
 	}
 }
 
 func (s *Ship) Extract(survey api.Survey) error {
-	s.log.Info("Extracting")
+	if s.IsCargoFull() {
+		return nil
+	}
 
 	if s.IsDocked() {
-		if err := s.Undock(); err != nil {
+		if err := s.Orbit(); err != nil {
 			return errors.Wrap(err, "Undock failed")
 		}
 	}
 
-	for {
-		if s.IsCargoFull() {
-			break
+	var yield api.ExtractionYield
+
+	if time.Until(survey.Expiration) > 0 {
+		s.log.Info("leveraging survey")
+
+		os := api.NewOptSurvey(survey)
+		res, err := s.client.ExtractResourcesWithSurvey(context.TODO(), os, api.ExtractResourcesWithSurveyParams{ShipSymbol: s.symbol})
+		if err != nil {
+			return errors.Wrap(err, "ExtractResources failed")
 		}
-
-		var yield api.ExtractionYield
-
-		if time.Until(survey.Expiration) > 0 {
-			s.log.Info("leveraging survey")
-
-			os := api.NewOptSurvey(survey)
-			res, err := s.client.ExtractResourcesWithSurvey(context.TODO(), os, api.ExtractResourcesWithSurveyParams{ShipSymbol: s.symbol})
-			if err != nil {
-				return errors.Wrap(err, "ExtractResources failed")
-			}
-			s.state.Cooldown = res.Data.Cooldown
-			s.state.Cargo = res.Data.Cargo
-			yield = res.Data.Extraction.Yield
-		} else {
-			res, err := s.client.ExtractResources(context.TODO(), api.OptExtractResourcesReq{}, api.ExtractResourcesParams{ShipSymbol: s.symbol})
-			if err != nil {
-				return errors.Wrap(err, "ExtractResources failed")
-			}
-			s.state.Cooldown = res.Data.Cooldown
-			s.state.Cargo = res.Data.Cargo
-			yield = res.Data.Extraction.Yield
+		s.state.Cooldown = res.Data.Cooldown
+		s.state.Cargo = res.Data.Cargo
+		yield = res.Data.Extraction.Yield
+	} else {
+		res, err := s.client.ExtractResources(context.TODO(), api.OptExtractResourcesReq{}, api.ExtractResourcesParams{ShipSymbol: s.symbol})
+		if err != nil {
+			return errors.Wrap(err, "ExtractResources failed")
 		}
-
-		s.log.Info(fmt.Sprintf("Extracted %d %s", yield.Units, yield.Symbol))
-		s.log.Info(fmt.Sprintf("Cooling down for %s", time.Until(s.state.Cooldown.Expiration.Value)))
-
-		time.Sleep(time.Until(s.state.Cooldown.Expiration.Value))
-
+		s.state.Cooldown = res.Data.Cooldown
+		s.state.Cargo = res.Data.Cargo
+		yield = res.Data.Extraction.Yield
 	}
+
+	s.log.Info(fmt.Sprintf("%s: Extracted %d %s", s.state.Symbol, yield.Units, yield.Symbol), "cargo.units", s.state.Cargo.Units, "cargo.cap", s.state.Cargo.Capacity)
 
 	return nil
 }

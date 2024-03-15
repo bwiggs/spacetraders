@@ -75,10 +75,10 @@ func initBackgroundTasks(client *api.Client) {
 		tasks.LogAgentMetrics(client)
 	}, 1*time.Minute)
 
-	tasks.SetInterval(func() {
-		tasks.ScanMarkets(client, r, "X1-HK42")
-		tasks.ScanShipyards(client, r, "X1-HK42")
-	}, 5*time.Minute)
+	// tasks.SetInterval(func() {
+	// 	tasks.ScanMarkets(client, r, viper.GetString("SYSTEM"))
+	// 	tasks.ScanShipyards(client, r, viper.GetString("SYSTEM"))
+	// }, 5*time.Minute)
 }
 
 func run() {

@@ -62,7 +62,7 @@
                     "WEAK": "Indicates very low production or consumption activity. This may suggest a surplus in supply or a lack of demand.",
                     "GROWING": "Represents increasing activity in production or consumption, suggesting a developing market.",
                     "STRONG": "Signifies high levels of production or consumption. Indicates a healthy and active market with high demand or supply.",
-                    "RESTRICTED": "Reflects a bottlneck in production or consumption, possibly due to a lack of supply or demand in related goods."
+                    "RESTRICTED": "Reflects a bottleneck in production or consumption, possibly due to a lack of supply or demand in related goods."
                 }
             },
             "Agent": {
@@ -735,6 +735,35 @@
                     "limit"
                 ]
             },
+            "RepairTransaction": {
+                "type": "object",
+                "properties": {
+                    "waypointSymbol": {
+                        "$ref": "#/components/schemas/WaypointSymbol"
+                    },
+                    "shipSymbol": {
+                        "type": "string",
+                        "description": "The symbol of the ship."
+                    },
+                    "totalPrice": {
+                        "type": "integer",
+                        "description": "The total price of the transaction.",
+                        "minimum": 0
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "The timestamp of the transaction."
+                    }
+                },
+                "required": [
+                    "waypointSymbol",
+                    "shipSymbol",
+                    "totalPrice",
+                    "timestamp"
+                ],
+                "description": "Result of a repair transaction."
+            },
             "ScannedShip": {
                 "description": "The ship that was scanned. Details include information about the ship that could be detected by the scanner.",
                 "type": "object",
@@ -904,6 +933,35 @@
                     "traits"
                 ]
             },
+            "ScrapTransaction": {
+                "type": "object",
+                "properties": {
+                    "waypointSymbol": {
+                        "$ref": "#/components/schemas/WaypointSymbol"
+                    },
+                    "shipSymbol": {
+                        "type": "string",
+                        "description": "The symbol of the ship."
+                    },
+                    "totalPrice": {
+                        "type": "integer",
+                        "description": "The total price of the transaction.",
+                        "minimum": 0
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "The timestamp of the transaction."
+                    }
+                },
+                "required": [
+                    "waypointSymbol",
+                    "shipSymbol",
+                    "totalPrice",
+                    "timestamp"
+                ],
+                "description": "Result of a scrap transaction."
+            },
             "Ship": {
                 "description": "Ship details.",
                 "type": "object",
@@ -1025,11 +1083,79 @@
                     "units"
                 ]
             },
-            "ShipCondition": {
-                "type": "integer",
-                "description": "Condition is a range of 0 to 100 where 0 is completely worn out and 100 is brand new.",
+            "ShipComponentCondition": {
+                "type": "number",
+                "format": "double",
+                "description": "The repairable condition of a component. A value of 0 indicates the component needs significant repairs, while a value of 1 indicates the component is in near perfect condition. As the condition of a component is repaired, the overall integrity of the component decreases.",
                 "minimum": 0,
-                "maximum": 100
+                "maximum": 1
+            },
+            "ShipComponentIntegrity": {
+                "type": "number",
+                "format": "double",
+                "description": "The overall integrity of the component, which determines the performance of the component. A value of 0 indicates that the component is almost completely degraded, while a value of 1 indicates that the component is in near perfect condition. The integrity of the component is non-repairable, and represents permanent wear over time.",
+                "minimum": 0,
+                "maximum": 1
+            },
+            "ShipConditionEvent": {
+                "type": "object",
+                "description": "An event that represents damage or wear to a ship's reactor, frame, or engine, reducing the condition of the ship.",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "enum": [
+                            "REACTOR_OVERLOAD",
+                            "ENERGY_SPIKE_FROM_MINERAL",
+                            "SOLAR_FLARE_INTERFERENCE",
+                            "COOLANT_LEAK",
+                            "POWER_DISTRIBUTION_FLUCTUATION",
+                            "MAGNETIC_FIELD_DISRUPTION",
+                            "HULL_MICROMETEORITE_STRIKES",
+                            "STRUCTURAL_STRESS_FRACTURES",
+                            "CORROSIVE_MINERAL_CONTAMINATION",
+                            "THERMAL_EXPANSION_MISMATCH",
+                            "VIBRATION_DAMAGE_FROM_DRILLING",
+                            "ELECTROMAGNETIC_FIELD_INTERFERENCE",
+                            "IMPACT_WITH_EXTRACTED_DEBRIS",
+                            "FUEL_EFFICIENCY_DEGRADATION",
+                            "COOLANT_SYSTEM_AGEING",
+                            "DUST_MICROABRASIONS",
+                            "THRUSTER_NOZZLE_WEAR",
+                            "EXHAUST_PORT_CLOGGING",
+                            "BEARING_LUBRICATION_FADE",
+                            "SENSOR_CALIBRATION_DRIFT",
+                            "HULL_MICROMETEORITE_DAMAGE",
+                            "SPACE_DEBRIS_COLLISION",
+                            "THERMAL_STRESS",
+                            "VIBRATION_OVERLOAD",
+                            "PRESSURE_DIFFERENTIAL_STRESS",
+                            "ELECTROMAGNETIC_SURGE_EFFECTS",
+                            "ATMOSPHERIC_ENTRY_HEAT"
+                        ]
+                    },
+                    "component": {
+                        "type": "string",
+                        "enum": [
+                            "FRAME",
+                            "REACTOR",
+                            "ENGINE"
+                        ]
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "The name of the event."
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "A description of the event."
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "component",
+                    "name",
+                    "description"
+                ]
             },
             "ShipCrew": {
                 "type": "object",
@@ -1100,7 +1226,10 @@
                         "description": "The description of the engine."
                     },
                     "condition": {
-                        "$ref": "#/components/schemas/ShipCondition"
+                        "$ref": "#/components/schemas/ShipComponentCondition"
+                    },
+                    "integrity": {
+                        "$ref": "#/components/schemas/ShipComponentIntegrity"
                     },
                     "speed": {
                         "type": "integer",
@@ -1114,6 +1243,8 @@
                 "required": [
                     "symbol",
                     "name",
+                    "condition",
+                    "integrity",
                     "description",
                     "speed",
                     "requirements"
@@ -1153,7 +1284,10 @@
                         "description": "Description of the frame."
                     },
                     "condition": {
-                        "$ref": "#/components/schemas/ShipCondition"
+                        "$ref": "#/components/schemas/ShipComponentCondition"
+                    },
+                    "integrity": {
+                        "$ref": "#/components/schemas/ShipComponentIntegrity"
                     },
                     "moduleSlots": {
                         "type": "integer",
@@ -1177,6 +1311,8 @@
                 "required": [
                     "symbol",
                     "name",
+                    "condition",
+                    "integrity",
                     "description",
                     "moduleSlots",
                     "mountingPoints",
@@ -1522,7 +1658,10 @@
                         "description": "Description of the reactor."
                     },
                     "condition": {
-                        "$ref": "#/components/schemas/ShipCondition"
+                        "$ref": "#/components/schemas/ShipComponentCondition"
+                    },
+                    "integrity": {
+                        "$ref": "#/components/schemas/ShipComponentIntegrity"
                     },
                     "powerOutput": {
                         "type": "integer",
@@ -1536,6 +1675,8 @@
                 "required": [
                     "symbol",
                     "name",
+                    "condition",
+                    "integrity",
                     "description",
                     "powerOutput",
                     "requirements"
@@ -4583,12 +4724,23 @@
                                                 },
                                                 "cargo": {
                                                     "$ref": "#/components/schemas/ShipCargo"
+                                                },
+                                                "events": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "oneOf": [
+                                                            {
+                                                                "$ref": "#/components/schemas/ShipConditionEvent"
+                                                            }
+                                                        ]
+                                                    }
                                                 }
                                             },
                                             "required": [
                                                 "extraction",
                                                 "cooldown",
-                                                "cargo"
+                                                "cargo",
+                                                "events"
                                             ],
                                             "type": "object"
                                         }
@@ -4646,12 +4798,23 @@
                                                 },
                                                 "cargo": {
                                                     "$ref": "#/components/schemas/ShipCargo"
+                                                },
+                                                "events": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "oneOf": [
+                                                            {
+                                                                "$ref": "#/components/schemas/ShipConditionEvent"
+                                                            }
+                                                        ]
+                                                    }
                                                 }
                                             },
                                             "required": [
                                                 "siphon",
                                                 "cooldown",
-                                                "cargo"
+                                                "cargo",
+                                                "events"
                                             ],
                                             "type": "object"
                                         }
@@ -4718,12 +4881,23 @@
                                                 },
                                                 "cargo": {
                                                     "$ref": "#/components/schemas/ShipCargo"
+                                                },
+                                                "events": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "oneOf": [
+                                                            {
+                                                                "$ref": "#/components/schemas/ShipConditionEvent"
+                                                            }
+                                                        ]
+                                                    }
                                                 }
                                             },
                                             "required": [
                                                 "extraction",
                                                 "cooldown",
-                                                "cargo"
+                                                "cargo",
+                                                "events"
                                             ],
                                             "type": "object"
                                         }
@@ -4960,11 +5134,22 @@
                                                 },
                                                 "nav": {
                                                     "$ref": "#/components/schemas/ShipNav"
+                                                },
+                                                "events": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "oneOf": [
+                                                            {
+                                                                "$ref": "#/components/schemas/ShipConditionEvent"
+                                                            }
+                                                        ]
+                                                    }
                                                 }
                                             },
                                             "required": [
                                                 "nav",
-                                                "fuel"
+                                                "fuel",
+                                                "events"
                                             ],
                                             "type": "object"
                                         }
@@ -5972,6 +6157,216 @@
                     }
                 ],
                 "summary": "Remove Mount",
+                "tags": [
+                    "Fleet"
+                ]
+            }
+        },
+        "/my/ships/{shipSymbol}/scrap": {
+            "parameters": [
+                {
+                    "description": "The ship symbol.",
+                    "in": "path",
+                    "name": "shipSymbol",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ],
+            "get": {
+                "x-preview-feature": true,
+                "description": "Get the amount of value that will be returned when scrapping a ship.",
+                "operationId": "get-scrap-ship",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "",
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "transaction": {
+                                                    "$ref": "#/components/schemas/ScrapTransaction"
+                                                }
+                                            },
+                                            "required": [
+                                                "transaction"
+                                            ],
+                                            "type": "object"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ],
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "Successfully retrieved the amount of value that will be returned when scrapping a ship."
+                    }
+                },
+                "security": [
+                    {
+                        "AgentToken": []
+                    }
+                ],
+                "summary": "Get Scrap Ship",
+                "tags": [
+                    "Fleet"
+                ]
+            },
+            "post": {
+                "x-preview-feature": true,
+                "description": "Scrap a ship, removing it from the game and returning a portion of the ship's value to the agent. The ship must be docked in a waypoint that has the `Shipyard` trait in order to use this function. To preview the amount of value that will be returned, use the Get Ship action.",
+                "operationId": "scrap-ship",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "",
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "agent": {
+                                                    "$ref": "#/components/schemas/Agent"
+                                                },
+                                                "transaction": {
+                                                    "$ref": "#/components/schemas/ScrapTransaction"
+                                                }
+                                            },
+                                            "required": [
+                                                "agent",
+                                                "transaction"
+                                            ],
+                                            "type": "object"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ],
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "Ship scrapped successfully."
+                    }
+                },
+                "security": [
+                    {
+                        "AgentToken": []
+                    }
+                ],
+                "summary": "Scrap Ship",
+                "tags": [
+                    "Fleet"
+                ]
+            }
+        },
+        "/my/ships/{shipSymbol}/repair": {
+            "parameters": [
+                {
+                    "description": "The ship symbol.",
+                    "in": "path",
+                    "name": "shipSymbol",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ],
+            "get": {
+                "x-preview-feature": true,
+                "description": "Get the cost of repairing a ship.",
+                "operationId": "get-repair-ship",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "",
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "transaction": {
+                                                    "$ref": "#/components/schemas/RepairTransaction"
+                                                }
+                                            },
+                                            "required": [
+                                                "transaction"
+                                            ],
+                                            "type": "object"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ],
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "Successfully retrieved the cost of repairing a ship."
+                    }
+                },
+                "security": [
+                    {
+                        "AgentToken": []
+                    }
+                ],
+                "summary": "Get Repair Ship",
+                "tags": [
+                    "Fleet"
+                ]
+            },
+            "post": {
+                "x-preview-feature": true,
+                "description": "Repair a ship, restoring the ship to maximum condition. The ship must be docked at a waypoint that has the `Shipyard` trait in order to use this function. To preview the cost of repairing the ship, use the Get action.",
+                "operationId": "repair-ship",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "",
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "agent": {
+                                                    "$ref": "#/components/schemas/Agent"
+                                                },
+                                                "ship": {
+                                                    "$ref": "#/components/schemas/Ship"
+                                                },
+                                                "transaction": {
+                                                    "$ref": "#/components/schemas/RepairTransaction"
+                                                }
+                                            },
+                                            "required": [
+                                                "agent",
+                                                "ship",
+                                                "transaction"
+                                            ],
+                                            "type": "object"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ],
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "Ship repaired successfully."
+                    }
+                },
+                "security": [
+                    {
+                        "AgentToken": []
+                    }
+                ],
+                "summary": "Repair Ship",
                 "tags": [
                     "Fleet"
                 ]

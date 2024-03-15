@@ -1031,10 +1031,50 @@ func (s *ExtractResourcesCreatedData) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if s.Events == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Events {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "events",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s ExtractResourcesCreatedDataEventsItem) Validate() error {
+	switch s.Type {
+	case ShipConditionEventExtractResourcesCreatedDataEventsItem:
+		if err := s.ShipConditionEvent.Validate(); err != nil {
+			return err
+		}
+		return nil
+	default:
+		return errors.Errorf("invalid type %q", s.Type)
+	}
 }
 
 func (s *ExtractResourcesReq) Validate() error {
@@ -1129,10 +1169,50 @@ func (s *ExtractResourcesWithSurveyCreatedData) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if s.Events == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Events {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "events",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s ExtractResourcesWithSurveyCreatedDataEventsItem) Validate() error {
+	switch s.Type {
+	case ShipConditionEventExtractResourcesWithSurveyCreatedDataEventsItem:
+		if err := s.ShipConditionEvent.Validate(); err != nil {
+			return err
+		}
+		return nil
+	default:
+		return errors.Errorf("invalid type %q", s.Type)
+	}
 }
 
 func (s *Extraction) Validate() error {
@@ -2000,6 +2080,98 @@ func (s *GetMyShipsOK) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "meta",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *GetRepairShipOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *GetRepairShipOKData) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Transaction.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "transaction",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *GetScrapShipOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *GetScrapShipOKData) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Transaction.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "transaction",
 			Error: err,
 		})
 	}
@@ -3147,10 +3319,50 @@ func (s *NavigateShipOKData) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if s.Events == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Events {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "events",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s NavigateShipOKDataEventsItem) Validate() error {
+	switch s.Type {
+	case ShipConditionEventNavigateShipOKDataEventsItem:
+		if err := s.ShipConditionEvent.Validate(); err != nil {
+			return err
+		}
+		return nil
+	default:
+		return errors.Errorf("invalid type %q", s.Type)
+	}
 }
 
 func (s *NegotiateContractCreated) Validate() error {
@@ -3804,6 +4016,117 @@ func (s *RemoveMountCreatedData) Validate() error {
 	return nil
 }
 
+func (s *RepairShipOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *RepairShipOKData) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Agent.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "agent",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Ship.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "ship",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Transaction.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "transaction",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *RepairTransaction) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.WaypointSymbol.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "waypointSymbol",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           0,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+		}).Validate(int64(s.TotalPrice)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "totalPrice",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *ScannedShip) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -4027,6 +4350,106 @@ func (s *ScannedWaypoint) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "chart",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *ScrapShipOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *ScrapShipOKData) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Agent.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "agent",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Transaction.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "transaction",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *ScrapTransaction) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.WaypointSymbol.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "waypointSymbol",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           0,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+		}).Validate(int64(s.TotalPrice)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "totalPrice",
 			Error: err,
 		})
 	}
@@ -4417,21 +4840,146 @@ func (s *ShipCargoItem) Validate() error {
 	return nil
 }
 
-func (s ShipCondition) Validate() error {
-	alias := (int)(s)
-	if err := (validate.Int{
+func (s ShipComponentCondition) Validate() error {
+	alias := (float64)(s)
+	if err := (validate.Float{
 		MinSet:        true,
 		Min:           0,
 		MaxSet:        true,
-		Max:           100,
+		Max:           1,
 		MinExclusive:  false,
 		MaxExclusive:  false,
 		MultipleOfSet: false,
-		MultipleOf:    0,
-	}).Validate(int64(alias)); err != nil {
-		return errors.Wrap(err, "int")
+		MultipleOf:    nil,
+	}).Validate(float64(alias)); err != nil {
+		return errors.Wrap(err, "float")
 	}
 	return nil
+}
+
+func (s ShipComponentIntegrity) Validate() error {
+	alias := (float64)(s)
+	if err := (validate.Float{
+		MinSet:        true,
+		Min:           0,
+		MaxSet:        true,
+		Max:           1,
+		MinExclusive:  false,
+		MaxExclusive:  false,
+		MultipleOfSet: false,
+		MultipleOf:    nil,
+	}).Validate(float64(alias)); err != nil {
+		return errors.Wrap(err, "float")
+	}
+	return nil
+}
+
+func (s *ShipConditionEvent) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Symbol.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "symbol",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Component.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "component",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s ShipConditionEventComponent) Validate() error {
+	switch s {
+	case "FRAME":
+		return nil
+	case "REACTOR":
+		return nil
+	case "ENGINE":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ShipConditionEventSymbol) Validate() error {
+	switch s {
+	case "REACTOR_OVERLOAD":
+		return nil
+	case "ENERGY_SPIKE_FROM_MINERAL":
+		return nil
+	case "SOLAR_FLARE_INTERFERENCE":
+		return nil
+	case "COOLANT_LEAK":
+		return nil
+	case "POWER_DISTRIBUTION_FLUCTUATION":
+		return nil
+	case "MAGNETIC_FIELD_DISRUPTION":
+		return nil
+	case "HULL_MICROMETEORITE_STRIKES":
+		return nil
+	case "STRUCTURAL_STRESS_FRACTURES":
+		return nil
+	case "CORROSIVE_MINERAL_CONTAMINATION":
+		return nil
+	case "THERMAL_EXPANSION_MISMATCH":
+		return nil
+	case "VIBRATION_DAMAGE_FROM_DRILLING":
+		return nil
+	case "ELECTROMAGNETIC_FIELD_INTERFERENCE":
+		return nil
+	case "IMPACT_WITH_EXTRACTED_DEBRIS":
+		return nil
+	case "FUEL_EFFICIENCY_DEGRADATION":
+		return nil
+	case "COOLANT_SYSTEM_AGEING":
+		return nil
+	case "DUST_MICROABRASIONS":
+		return nil
+	case "THRUSTER_NOZZLE_WEAR":
+		return nil
+	case "EXHAUST_PORT_CLOGGING":
+		return nil
+	case "BEARING_LUBRICATION_FADE":
+		return nil
+	case "SENSOR_CALIBRATION_DRIFT":
+		return nil
+	case "HULL_MICROMETEORITE_DAMAGE":
+		return nil
+	case "SPACE_DEBRIS_COLLISION":
+		return nil
+	case "THERMAL_STRESS":
+		return nil
+	case "VIBRATION_OVERLOAD":
+		return nil
+	case "PRESSURE_DIFFERENTIAL_STRESS":
+		return nil
+	case "ELECTROMAGNETIC_SURGE_EFFECTS":
+		return nil
+	case "ATMOSPHERIC_ENTRY_HEAT":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s *ShipCrew) Validate() error {
@@ -4526,20 +5074,24 @@ func (s *ShipEngine) Validate() error {
 		})
 	}
 	if err := func() error {
-		if value, ok := s.Condition.Get(); ok {
-			if err := func() error {
-				if err := value.Validate(); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
+		if err := s.Condition.Validate(); err != nil {
+			return err
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "condition",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Integrity.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "integrity",
 			Error: err,
 		})
 	}
@@ -4602,20 +5154,24 @@ func (s *ShipFrame) Validate() error {
 		})
 	}
 	if err := func() error {
-		if value, ok := s.Condition.Get(); ok {
-			if err := func() error {
-				if err := value.Validate(); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
+		if err := s.Condition.Validate(); err != nil {
+			return err
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "condition",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Integrity.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "integrity",
 			Error: err,
 		})
 	}
@@ -5327,20 +5883,24 @@ func (s *ShipReactor) Validate() error {
 		})
 	}
 	if err := func() error {
-		if value, ok := s.Condition.Get(); ok {
-			if err := func() error {
-				if err := value.Validate(); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
+		if err := s.Condition.Validate(); err != nil {
+			return err
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "condition",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Integrity.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "integrity",
 			Error: err,
 		})
 	}
@@ -6061,10 +6621,50 @@ func (s *SiphonResourcesCreatedData) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if s.Events == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Events {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "events",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s SiphonResourcesCreatedDataEventsItem) Validate() error {
+	switch s.Type {
+	case ShipConditionEventSiphonResourcesCreatedDataEventsItem:
+		if err := s.ShipConditionEvent.Validate(); err != nil {
+			return err
+		}
+		return nil
+	default:
+		return errors.Errorf("invalid type %q", s.Type)
+	}
 }
 
 func (s *SiphonYield) Validate() error {

@@ -206,6 +206,18 @@ type Handler interface {
 	//
 	// GET /my/ships
 	GetMyShips(ctx context.Context, params GetMyShipsParams) (*GetMyShipsOK, error)
+	// GetRepairShip implements get-repair-ship operation.
+	//
+	// Get the cost of repairing a ship.
+	//
+	// GET /my/ships/{shipSymbol}/repair
+	GetRepairShip(ctx context.Context, params GetRepairShipParams) (*GetRepairShipOK, error)
+	// GetScrapShip implements get-scrap-ship operation.
+	//
+	// Get the amount of value that will be returned when scrapping a ship.
+	//
+	// GET /my/ships/{shipSymbol}/scrap
+	GetScrapShip(ctx context.Context, params GetScrapShipParams) (*GetScrapShipOK, error)
 	// GetShipCooldown implements get-ship-cooldown operation.
 	//
 	// Retrieve the details of your ship's reactor cooldown. Some actions such as activating your jump
@@ -395,6 +407,22 @@ type Handler interface {
 	//
 	// POST /my/ships/{shipSymbol}/mounts/remove
 	RemoveMount(ctx context.Context, req OptRemoveMountReq, params RemoveMountParams) (*RemoveMountCreated, error)
+	// RepairShip implements repair-ship operation.
+	//
+	// Repair a ship, restoring the ship to maximum condition. The ship must be docked at a waypoint that
+	// has the `Shipyard` trait in order to use this function. To preview the cost of repairing the ship,
+	// use the Get action.
+	//
+	// POST /my/ships/{shipSymbol}/repair
+	RepairShip(ctx context.Context, params RepairShipParams) (*RepairShipOK, error)
+	// ScrapShip implements scrap-ship operation.
+	//
+	// Scrap a ship, removing it from the game and returning a portion of the ship's value to the agent.
+	// The ship must be docked in a waypoint that has the `Shipyard` trait in order to use this function.
+	// To preview the amount of value that will be returned, use the Get Ship action.
+	//
+	// POST /my/ships/{shipSymbol}/scrap
+	ScrapShip(ctx context.Context, params ScrapShipParams) (*ScrapShipOK, error)
 	// SellCargo implements sell-cargo operation.
 	//
 	// Sell cargo in your ship to a market that trades this cargo. The ship must be docked in a waypoint

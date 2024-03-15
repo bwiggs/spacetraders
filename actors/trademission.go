@@ -15,15 +15,6 @@ type TradeMission struct {
 	contractID string
 }
 
-func NewContractMission(good, origin, dest string) *TradeMission {
-	return &TradeMission{
-		good:   good,
-		origin: origin,
-		dest:   dest,
-		state:  IdleState,
-	}
-}
-
 func NewTradeMission(good, origin, dest string) *TradeMission {
 	return &TradeMission{
 		good:   good,
@@ -56,7 +47,7 @@ func (m *TradeMission) Execute(ship *Ship) {
 		}
 		m.state = BuyState
 	case BuyState:
-		if err := ship.Buy(m.good, m.origin); err != nil {
+		if err := ship.Buy(m.good, 999, m.origin); err != nil {
 			ship.log.Error(err.Error())
 			return
 		}

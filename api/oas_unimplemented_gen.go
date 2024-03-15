@@ -286,6 +286,24 @@ func (UnimplementedHandler) GetMyShips(ctx context.Context, params GetMyShipsPar
 	return r, ht.ErrNotImplemented
 }
 
+// GetRepairShip implements get-repair-ship operation.
+//
+// Get the cost of repairing a ship.
+//
+// GET /my/ships/{shipSymbol}/repair
+func (UnimplementedHandler) GetRepairShip(ctx context.Context, params GetRepairShipParams) (r *GetRepairShipOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetScrapShip implements get-scrap-ship operation.
+//
+// Get the amount of value that will be returned when scrapping a ship.
+//
+// GET /my/ships/{shipSymbol}/scrap
+func (UnimplementedHandler) GetScrapShip(ctx context.Context, params GetScrapShipParams) (r *GetScrapShipOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetShipCooldown implements get-ship-cooldown operation.
 //
 // Retrieve the details of your ship's reactor cooldown. Some actions such as activating your jump
@@ -534,6 +552,28 @@ func (UnimplementedHandler) Register(ctx context.Context, req OptRegisterReq) (r
 //
 // POST /my/ships/{shipSymbol}/mounts/remove
 func (UnimplementedHandler) RemoveMount(ctx context.Context, req OptRemoveMountReq, params RemoveMountParams) (r *RemoveMountCreated, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RepairShip implements repair-ship operation.
+//
+// Repair a ship, restoring the ship to maximum condition. The ship must be docked at a waypoint that
+// has the `Shipyard` trait in order to use this function. To preview the cost of repairing the ship,
+// use the Get action.
+//
+// POST /my/ships/{shipSymbol}/repair
+func (UnimplementedHandler) RepairShip(ctx context.Context, params RepairShipParams) (r *RepairShipOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ScrapShip implements scrap-ship operation.
+//
+// Scrap a ship, removing it from the game and returning a portion of the ship's value to the agent.
+// The ship must be docked in a waypoint that has the `Shipyard` trait in order to use this function.
+// To preview the amount of value that will be returned, use the Get Ship action.
+//
+// POST /my/ships/{shipSymbol}/scrap
+func (UnimplementedHandler) ScrapShip(ctx context.Context, params ScrapShipParams) (r *ScrapShipOK, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

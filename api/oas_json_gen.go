@@ -3306,12 +3306,21 @@ func (s *ExtractResourcesCreatedData) encodeFields(e *jx.Encoder) {
 		e.FieldStart("cargo")
 		s.Cargo.Encode(e)
 	}
+	{
+		e.FieldStart("events")
+		e.ArrStart()
+		for _, elem := range s.Events {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
 }
 
-var jsonFieldsNameOfExtractResourcesCreatedData = [3]string{
+var jsonFieldsNameOfExtractResourcesCreatedData = [4]string{
 	0: "cooldown",
 	1: "extraction",
 	2: "cargo",
+	3: "events",
 }
 
 // Decode decodes ExtractResourcesCreatedData from json.
@@ -3353,6 +3362,24 @@ func (s *ExtractResourcesCreatedData) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"cargo\"")
 			}
+		case "events":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				s.Events = make([]ExtractResourcesCreatedDataEventsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem ExtractResourcesCreatedDataEventsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Events = append(s.Events, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"events\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -3363,7 +3390,7 @@ func (s *ExtractResourcesCreatedData) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000111,
+		0b00001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -3405,6 +3432,45 @@ func (s *ExtractResourcesCreatedData) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ExtractResourcesCreatedData) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ExtractResourcesCreatedDataEventsItem as json.
+func (s ExtractResourcesCreatedDataEventsItem) Encode(e *jx.Encoder) {
+	switch s.Type {
+	case ShipConditionEventExtractResourcesCreatedDataEventsItem:
+		s.ShipConditionEvent.Encode(e)
+	}
+}
+
+// Decode decodes ExtractResourcesCreatedDataEventsItem from json.
+func (s *ExtractResourcesCreatedDataEventsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ExtractResourcesCreatedDataEventsItem to nil")
+	}
+	// Sum type type_discriminator.
+	switch t := d.Next(); t {
+	case jx.Object:
+		if err := s.ShipConditionEvent.Decode(d); err != nil {
+			return err
+		}
+		s.Type = ShipConditionEventExtractResourcesCreatedDataEventsItem
+	default:
+		return errors.Errorf("unexpected json type %q", t)
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ExtractResourcesCreatedDataEventsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ExtractResourcesCreatedDataEventsItem) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -3587,12 +3653,21 @@ func (s *ExtractResourcesWithSurveyCreatedData) encodeFields(e *jx.Encoder) {
 		e.FieldStart("cargo")
 		s.Cargo.Encode(e)
 	}
+	{
+		e.FieldStart("events")
+		e.ArrStart()
+		for _, elem := range s.Events {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
 }
 
-var jsonFieldsNameOfExtractResourcesWithSurveyCreatedData = [3]string{
+var jsonFieldsNameOfExtractResourcesWithSurveyCreatedData = [4]string{
 	0: "cooldown",
 	1: "extraction",
 	2: "cargo",
+	3: "events",
 }
 
 // Decode decodes ExtractResourcesWithSurveyCreatedData from json.
@@ -3634,6 +3709,24 @@ func (s *ExtractResourcesWithSurveyCreatedData) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"cargo\"")
 			}
+		case "events":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				s.Events = make([]ExtractResourcesWithSurveyCreatedDataEventsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem ExtractResourcesWithSurveyCreatedDataEventsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Events = append(s.Events, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"events\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -3644,7 +3737,7 @@ func (s *ExtractResourcesWithSurveyCreatedData) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000111,
+		0b00001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -3686,6 +3779,45 @@ func (s *ExtractResourcesWithSurveyCreatedData) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ExtractResourcesWithSurveyCreatedData) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ExtractResourcesWithSurveyCreatedDataEventsItem as json.
+func (s ExtractResourcesWithSurveyCreatedDataEventsItem) Encode(e *jx.Encoder) {
+	switch s.Type {
+	case ShipConditionEventExtractResourcesWithSurveyCreatedDataEventsItem:
+		s.ShipConditionEvent.Encode(e)
+	}
+}
+
+// Decode decodes ExtractResourcesWithSurveyCreatedDataEventsItem from json.
+func (s *ExtractResourcesWithSurveyCreatedDataEventsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ExtractResourcesWithSurveyCreatedDataEventsItem to nil")
+	}
+	// Sum type type_discriminator.
+	switch t := d.Next(); t {
+	case jx.Object:
+		if err := s.ShipConditionEvent.Decode(d); err != nil {
+			return err
+		}
+		s.Type = ShipConditionEventExtractResourcesWithSurveyCreatedDataEventsItem
+	default:
+		return errors.Errorf("unexpected json type %q", t)
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ExtractResourcesWithSurveyCreatedDataEventsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ExtractResourcesWithSurveyCreatedDataEventsItem) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -6092,6 +6224,382 @@ func (s *GetMyShipsOK) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *GetMyShipsOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *GetRepairShipOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *GetRepairShipOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfGetRepairShipOK = [1]string{
+	0: "data",
+}
+
+// Decode decodes GetRepairShipOK from json.
+func (s *GetRepairShipOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetRepairShipOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "data":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode GetRepairShipOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfGetRepairShipOK) {
+					name = jsonFieldsNameOfGetRepairShipOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetRepairShipOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetRepairShipOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *GetRepairShipOKData) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *GetRepairShipOKData) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("transaction")
+		s.Transaction.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfGetRepairShipOKData = [1]string{
+	0: "transaction",
+}
+
+// Decode decodes GetRepairShipOKData from json.
+func (s *GetRepairShipOKData) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetRepairShipOKData to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "transaction":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Transaction.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"transaction\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode GetRepairShipOKData")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfGetRepairShipOKData) {
+					name = jsonFieldsNameOfGetRepairShipOKData[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetRepairShipOKData) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetRepairShipOKData) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *GetScrapShipOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *GetScrapShipOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfGetScrapShipOK = [1]string{
+	0: "data",
+}
+
+// Decode decodes GetScrapShipOK from json.
+func (s *GetScrapShipOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetScrapShipOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "data":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode GetScrapShipOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfGetScrapShipOK) {
+					name = jsonFieldsNameOfGetScrapShipOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetScrapShipOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetScrapShipOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *GetScrapShipOKData) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *GetScrapShipOKData) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("transaction")
+		s.Transaction.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfGetScrapShipOKData = [1]string{
+	0: "transaction",
+}
+
+// Decode decodes GetScrapShipOKData from json.
+func (s *GetScrapShipOKData) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetScrapShipOKData to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "transaction":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Transaction.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"transaction\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode GetScrapShipOKData")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfGetScrapShipOKData) {
+					name = jsonFieldsNameOfGetScrapShipOKData[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetScrapShipOKData) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetScrapShipOKData) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -9952,11 +10460,20 @@ func (s *NavigateShipOKData) encodeFields(e *jx.Encoder) {
 		e.FieldStart("nav")
 		s.Nav.Encode(e)
 	}
+	{
+		e.FieldStart("events")
+		e.ArrStart()
+		for _, elem := range s.Events {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
 }
 
-var jsonFieldsNameOfNavigateShipOKData = [2]string{
+var jsonFieldsNameOfNavigateShipOKData = [3]string{
 	0: "fuel",
 	1: "nav",
+	2: "events",
 }
 
 // Decode decodes NavigateShipOKData from json.
@@ -9988,6 +10505,24 @@ func (s *NavigateShipOKData) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"nav\"")
 			}
+		case "events":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				s.Events = make([]NavigateShipOKDataEventsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem NavigateShipOKDataEventsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Events = append(s.Events, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"events\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -9998,7 +10533,7 @@ func (s *NavigateShipOKData) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -10040,6 +10575,45 @@ func (s *NavigateShipOKData) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *NavigateShipOKData) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes NavigateShipOKDataEventsItem as json.
+func (s NavigateShipOKDataEventsItem) Encode(e *jx.Encoder) {
+	switch s.Type {
+	case ShipConditionEventNavigateShipOKDataEventsItem:
+		s.ShipConditionEvent.Encode(e)
+	}
+}
+
+// Decode decodes NavigateShipOKDataEventsItem from json.
+func (s *NavigateShipOKDataEventsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode NavigateShipOKDataEventsItem to nil")
+	}
+	// Sum type type_discriminator.
+	switch t := d.Next(); t {
+	case jx.Object:
+		if err := s.ShipConditionEvent.Decode(d); err != nil {
+			return err
+		}
+		s.Type = ShipConditionEventNavigateShipOKDataEventsItem
+	default:
+		return errors.Errorf("unexpected json type %q", t)
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NavigateShipOKDataEventsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NavigateShipOKDataEventsItem) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -10990,39 +11564,6 @@ func (s OptSellCargoReq) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptSellCargoReq) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes ShipCondition as json.
-func (o OptShipCondition) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes ShipCondition from json.
-func (o *OptShipCondition) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptShipCondition to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptShipCondition) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptShipCondition) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -13414,6 +13955,369 @@ func (s *RemoveMountReq) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s *RepairShipOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *RepairShipOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfRepairShipOK = [1]string{
+	0: "data",
+}
+
+// Decode decodes RepairShipOK from json.
+func (s *RepairShipOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RepairShipOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "data":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode RepairShipOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfRepairShipOK) {
+					name = jsonFieldsNameOfRepairShipOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *RepairShipOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RepairShipOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *RepairShipOKData) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *RepairShipOKData) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("agent")
+		s.Agent.Encode(e)
+	}
+	{
+		e.FieldStart("ship")
+		s.Ship.Encode(e)
+	}
+	{
+		e.FieldStart("transaction")
+		s.Transaction.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfRepairShipOKData = [3]string{
+	0: "agent",
+	1: "ship",
+	2: "transaction",
+}
+
+// Decode decodes RepairShipOKData from json.
+func (s *RepairShipOKData) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RepairShipOKData to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "agent":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Agent.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"agent\"")
+			}
+		case "ship":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Ship.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"ship\"")
+			}
+		case "transaction":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.Transaction.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"transaction\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode RepairShipOKData")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfRepairShipOKData) {
+					name = jsonFieldsNameOfRepairShipOKData[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *RepairShipOKData) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RepairShipOKData) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *RepairTransaction) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *RepairTransaction) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("waypointSymbol")
+		s.WaypointSymbol.Encode(e)
+	}
+	{
+		e.FieldStart("shipSymbol")
+		e.Str(s.ShipSymbol)
+	}
+	{
+		e.FieldStart("totalPrice")
+		e.Int(s.TotalPrice)
+	}
+	{
+		e.FieldStart("timestamp")
+		json.EncodeDateTime(e, s.Timestamp)
+	}
+}
+
+var jsonFieldsNameOfRepairTransaction = [4]string{
+	0: "waypointSymbol",
+	1: "shipSymbol",
+	2: "totalPrice",
+	3: "timestamp",
+}
+
+// Decode decodes RepairTransaction from json.
+func (s *RepairTransaction) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RepairTransaction to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "waypointSymbol":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.WaypointSymbol.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"waypointSymbol\"")
+			}
+		case "shipSymbol":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.ShipSymbol = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"shipSymbol\"")
+			}
+		case "totalPrice":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Int()
+				s.TotalPrice = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"totalPrice\"")
+			}
+		case "timestamp":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.Timestamp = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"timestamp\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode RepairTransaction")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfRepairTransaction) {
+					name = jsonFieldsNameOfRepairTransaction[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *RepairTransaction) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RepairTransaction) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *ScannedShip) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -14427,6 +15331,354 @@ func (s *ScannedWaypoint) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s *ScrapShipOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ScrapShipOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfScrapShipOK = [1]string{
+	0: "data",
+}
+
+// Decode decodes ScrapShipOK from json.
+func (s *ScrapShipOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ScrapShipOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "data":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ScrapShipOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfScrapShipOK) {
+					name = jsonFieldsNameOfScrapShipOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ScrapShipOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ScrapShipOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ScrapShipOKData) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ScrapShipOKData) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("agent")
+		s.Agent.Encode(e)
+	}
+	{
+		e.FieldStart("transaction")
+		s.Transaction.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfScrapShipOKData = [2]string{
+	0: "agent",
+	1: "transaction",
+}
+
+// Decode decodes ScrapShipOKData from json.
+func (s *ScrapShipOKData) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ScrapShipOKData to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "agent":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Agent.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"agent\"")
+			}
+		case "transaction":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Transaction.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"transaction\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ScrapShipOKData")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfScrapShipOKData) {
+					name = jsonFieldsNameOfScrapShipOKData[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ScrapShipOKData) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ScrapShipOKData) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ScrapTransaction) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ScrapTransaction) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("waypointSymbol")
+		s.WaypointSymbol.Encode(e)
+	}
+	{
+		e.FieldStart("shipSymbol")
+		e.Str(s.ShipSymbol)
+	}
+	{
+		e.FieldStart("totalPrice")
+		e.Int(s.TotalPrice)
+	}
+	{
+		e.FieldStart("timestamp")
+		json.EncodeDateTime(e, s.Timestamp)
+	}
+}
+
+var jsonFieldsNameOfScrapTransaction = [4]string{
+	0: "waypointSymbol",
+	1: "shipSymbol",
+	2: "totalPrice",
+	3: "timestamp",
+}
+
+// Decode decodes ScrapTransaction from json.
+func (s *ScrapTransaction) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ScrapTransaction to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "waypointSymbol":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.WaypointSymbol.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"waypointSymbol\"")
+			}
+		case "shipSymbol":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.ShipSymbol = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"shipSymbol\"")
+			}
+		case "totalPrice":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Int()
+				s.TotalPrice = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"totalPrice\"")
+			}
+		case "timestamp":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.Timestamp = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"timestamp\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ScrapTransaction")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfScrapTransaction) {
+					name = jsonFieldsNameOfScrapTransaction[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ScrapTransaction) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ScrapTransaction) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *SellCargoCreated) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -15326,22 +16578,22 @@ func (s *ShipCargoItem) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes ShipCondition as json.
-func (s ShipCondition) Encode(e *jx.Encoder) {
-	unwrapped := int(s)
+// Encode encodes ShipComponentCondition as json.
+func (s ShipComponentCondition) Encode(e *jx.Encoder) {
+	unwrapped := float64(s)
 
-	e.Int(unwrapped)
+	e.Float64(unwrapped)
 }
 
-// Decode decodes ShipCondition from json.
-func (s *ShipCondition) Decode(d *jx.Decoder) error {
+// Decode decodes ShipComponentCondition from json.
+func (s *ShipComponentCondition) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode ShipCondition to nil")
+		return errors.New("invalid: unable to decode ShipComponentCondition to nil")
 	}
-	var unwrapped int
+	var unwrapped float64
 	if err := func() error {
-		v, err := d.Int()
-		unwrapped = int(v)
+		v, err := d.Float64()
+		unwrapped = float64(v)
 		if err != nil {
 			return err
 		}
@@ -15349,19 +16601,334 @@ func (s *ShipCondition) Decode(d *jx.Decoder) error {
 	}(); err != nil {
 		return errors.Wrap(err, "alias")
 	}
-	*s = ShipCondition(unwrapped)
+	*s = ShipComponentCondition(unwrapped)
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s ShipCondition) MarshalJSON() ([]byte, error) {
+func (s ShipComponentCondition) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *ShipCondition) UnmarshalJSON(data []byte) error {
+func (s *ShipComponentCondition) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ShipComponentIntegrity as json.
+func (s ShipComponentIntegrity) Encode(e *jx.Encoder) {
+	unwrapped := float64(s)
+
+	e.Float64(unwrapped)
+}
+
+// Decode decodes ShipComponentIntegrity from json.
+func (s *ShipComponentIntegrity) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ShipComponentIntegrity to nil")
+	}
+	var unwrapped float64
+	if err := func() error {
+		v, err := d.Float64()
+		unwrapped = float64(v)
+		if err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ShipComponentIntegrity(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ShipComponentIntegrity) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ShipComponentIntegrity) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ShipConditionEvent) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ShipConditionEvent) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("symbol")
+		s.Symbol.Encode(e)
+	}
+	{
+		e.FieldStart("component")
+		s.Component.Encode(e)
+	}
+	{
+		e.FieldStart("name")
+		e.Str(s.Name)
+	}
+	{
+		e.FieldStart("description")
+		e.Str(s.Description)
+	}
+}
+
+var jsonFieldsNameOfShipConditionEvent = [4]string{
+	0: "symbol",
+	1: "component",
+	2: "name",
+	3: "description",
+}
+
+// Decode decodes ShipConditionEvent from json.
+func (s *ShipConditionEvent) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ShipConditionEvent to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "symbol":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Symbol.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"symbol\"")
+			}
+		case "component":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Component.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"component\"")
+			}
+		case "name":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Name = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"name\"")
+			}
+		case "description":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Str()
+				s.Description = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"description\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ShipConditionEvent")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfShipConditionEvent) {
+					name = jsonFieldsNameOfShipConditionEvent[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ShipConditionEvent) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ShipConditionEvent) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ShipConditionEventComponent as json.
+func (s ShipConditionEventComponent) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ShipConditionEventComponent from json.
+func (s *ShipConditionEventComponent) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ShipConditionEventComponent to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ShipConditionEventComponent(v) {
+	case ShipConditionEventComponentFRAME:
+		*s = ShipConditionEventComponentFRAME
+	case ShipConditionEventComponentREACTOR:
+		*s = ShipConditionEventComponentREACTOR
+	case ShipConditionEventComponentENGINE:
+		*s = ShipConditionEventComponentENGINE
+	default:
+		*s = ShipConditionEventComponent(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ShipConditionEventComponent) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ShipConditionEventComponent) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ShipConditionEventSymbol as json.
+func (s ShipConditionEventSymbol) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ShipConditionEventSymbol from json.
+func (s *ShipConditionEventSymbol) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ShipConditionEventSymbol to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ShipConditionEventSymbol(v) {
+	case ShipConditionEventSymbolREACTOROVERLOAD:
+		*s = ShipConditionEventSymbolREACTOROVERLOAD
+	case ShipConditionEventSymbolENERGYSPIKEFROMMINERAL:
+		*s = ShipConditionEventSymbolENERGYSPIKEFROMMINERAL
+	case ShipConditionEventSymbolSOLARFLAREINTERFERENCE:
+		*s = ShipConditionEventSymbolSOLARFLAREINTERFERENCE
+	case ShipConditionEventSymbolCOOLANTLEAK:
+		*s = ShipConditionEventSymbolCOOLANTLEAK
+	case ShipConditionEventSymbolPOWERDISTRIBUTIONFLUCTUATION:
+		*s = ShipConditionEventSymbolPOWERDISTRIBUTIONFLUCTUATION
+	case ShipConditionEventSymbolMAGNETICFIELDDISRUPTION:
+		*s = ShipConditionEventSymbolMAGNETICFIELDDISRUPTION
+	case ShipConditionEventSymbolHULLMICROMETEORITESTRIKES:
+		*s = ShipConditionEventSymbolHULLMICROMETEORITESTRIKES
+	case ShipConditionEventSymbolSTRUCTURALSTRESSFRACTURES:
+		*s = ShipConditionEventSymbolSTRUCTURALSTRESSFRACTURES
+	case ShipConditionEventSymbolCORROSIVEMINERALCONTAMINATION:
+		*s = ShipConditionEventSymbolCORROSIVEMINERALCONTAMINATION
+	case ShipConditionEventSymbolTHERMALEXPANSIONMISMATCH:
+		*s = ShipConditionEventSymbolTHERMALEXPANSIONMISMATCH
+	case ShipConditionEventSymbolVIBRATIONDAMAGEFROMDRILLING:
+		*s = ShipConditionEventSymbolVIBRATIONDAMAGEFROMDRILLING
+	case ShipConditionEventSymbolELECTROMAGNETICFIELDINTERFERENCE:
+		*s = ShipConditionEventSymbolELECTROMAGNETICFIELDINTERFERENCE
+	case ShipConditionEventSymbolIMPACTWITHEXTRACTEDDEBRIS:
+		*s = ShipConditionEventSymbolIMPACTWITHEXTRACTEDDEBRIS
+	case ShipConditionEventSymbolFUELEFFICIENCYDEGRADATION:
+		*s = ShipConditionEventSymbolFUELEFFICIENCYDEGRADATION
+	case ShipConditionEventSymbolCOOLANTSYSTEMAGEING:
+		*s = ShipConditionEventSymbolCOOLANTSYSTEMAGEING
+	case ShipConditionEventSymbolDUSTMICROABRASIONS:
+		*s = ShipConditionEventSymbolDUSTMICROABRASIONS
+	case ShipConditionEventSymbolTHRUSTERNOZZLEWEAR:
+		*s = ShipConditionEventSymbolTHRUSTERNOZZLEWEAR
+	case ShipConditionEventSymbolEXHAUSTPORTCLOGGING:
+		*s = ShipConditionEventSymbolEXHAUSTPORTCLOGGING
+	case ShipConditionEventSymbolBEARINGLUBRICATIONFADE:
+		*s = ShipConditionEventSymbolBEARINGLUBRICATIONFADE
+	case ShipConditionEventSymbolSENSORCALIBRATIONDRIFT:
+		*s = ShipConditionEventSymbolSENSORCALIBRATIONDRIFT
+	case ShipConditionEventSymbolHULLMICROMETEORITEDAMAGE:
+		*s = ShipConditionEventSymbolHULLMICROMETEORITEDAMAGE
+	case ShipConditionEventSymbolSPACEDEBRISCOLLISION:
+		*s = ShipConditionEventSymbolSPACEDEBRISCOLLISION
+	case ShipConditionEventSymbolTHERMALSTRESS:
+		*s = ShipConditionEventSymbolTHERMALSTRESS
+	case ShipConditionEventSymbolVIBRATIONOVERLOAD:
+		*s = ShipConditionEventSymbolVIBRATIONOVERLOAD
+	case ShipConditionEventSymbolPRESSUREDIFFERENTIALSTRESS:
+		*s = ShipConditionEventSymbolPRESSUREDIFFERENTIALSTRESS
+	case ShipConditionEventSymbolELECTROMAGNETICSURGEEFFECTS:
+		*s = ShipConditionEventSymbolELECTROMAGNETICSURGEEFFECTS
+	case ShipConditionEventSymbolATMOSPHERICENTRYHEAT:
+		*s = ShipConditionEventSymbolATMOSPHERICENTRYHEAT
+	default:
+		*s = ShipConditionEventSymbol(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ShipConditionEventSymbol) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ShipConditionEventSymbol) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -15608,10 +17175,12 @@ func (s *ShipEngine) encodeFields(e *jx.Encoder) {
 		e.Str(s.Description)
 	}
 	{
-		if s.Condition.Set {
-			e.FieldStart("condition")
-			s.Condition.Encode(e)
-		}
+		e.FieldStart("condition")
+		s.Condition.Encode(e)
+	}
+	{
+		e.FieldStart("integrity")
+		s.Integrity.Encode(e)
 	}
 	{
 		e.FieldStart("speed")
@@ -15623,13 +17192,14 @@ func (s *ShipEngine) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfShipEngine = [6]string{
+var jsonFieldsNameOfShipEngine = [7]string{
 	0: "symbol",
 	1: "name",
 	2: "description",
 	3: "condition",
-	4: "speed",
-	5: "requirements",
+	4: "integrity",
+	5: "speed",
+	6: "requirements",
 }
 
 // Decode decodes ShipEngine from json.
@@ -15676,8 +17246,8 @@ func (s *ShipEngine) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"description\"")
 			}
 		case "condition":
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
-				s.Condition.Reset()
 				if err := s.Condition.Decode(d); err != nil {
 					return err
 				}
@@ -15685,8 +17255,18 @@ func (s *ShipEngine) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"condition\"")
 			}
-		case "speed":
+		case "integrity":
 			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				if err := s.Integrity.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"integrity\"")
+			}
+		case "speed":
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := d.Int()
 				s.Speed = int(v)
@@ -15698,7 +17278,7 @@ func (s *ShipEngine) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"speed\"")
 			}
 		case "requirements":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				if err := s.Requirements.Decode(d); err != nil {
 					return err
@@ -15717,7 +17297,7 @@ func (s *ShipEngine) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00110111,
+		0b01111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -15829,10 +17409,12 @@ func (s *ShipFrame) encodeFields(e *jx.Encoder) {
 		e.Str(s.Description)
 	}
 	{
-		if s.Condition.Set {
-			e.FieldStart("condition")
-			s.Condition.Encode(e)
-		}
+		e.FieldStart("condition")
+		s.Condition.Encode(e)
+	}
+	{
+		e.FieldStart("integrity")
+		s.Integrity.Encode(e)
 	}
 	{
 		e.FieldStart("moduleSlots")
@@ -15852,15 +17434,16 @@ func (s *ShipFrame) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfShipFrame = [8]string{
+var jsonFieldsNameOfShipFrame = [9]string{
 	0: "symbol",
 	1: "name",
 	2: "description",
 	3: "condition",
-	4: "moduleSlots",
-	5: "mountingPoints",
-	6: "fuelCapacity",
-	7: "requirements",
+	4: "integrity",
+	5: "moduleSlots",
+	6: "mountingPoints",
+	7: "fuelCapacity",
+	8: "requirements",
 }
 
 // Decode decodes ShipFrame from json.
@@ -15868,7 +17451,7 @@ func (s *ShipFrame) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode ShipFrame to nil")
 	}
-	var requiredBitSet [1]uint8
+	var requiredBitSet [2]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -15907,8 +17490,8 @@ func (s *ShipFrame) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"description\"")
 			}
 		case "condition":
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
-				s.Condition.Reset()
 				if err := s.Condition.Decode(d); err != nil {
 					return err
 				}
@@ -15916,8 +17499,18 @@ func (s *ShipFrame) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"condition\"")
 			}
-		case "moduleSlots":
+		case "integrity":
 			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				if err := s.Integrity.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"integrity\"")
+			}
+		case "moduleSlots":
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := d.Int()
 				s.ModuleSlots = int(v)
@@ -15929,7 +17522,7 @@ func (s *ShipFrame) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"moduleSlots\"")
 			}
 		case "mountingPoints":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				v, err := d.Int()
 				s.MountingPoints = int(v)
@@ -15941,7 +17534,7 @@ func (s *ShipFrame) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"mountingPoints\"")
 			}
 		case "fuelCapacity":
-			requiredBitSet[0] |= 1 << 6
+			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				v, err := d.Int()
 				s.FuelCapacity = int(v)
@@ -15953,7 +17546,7 @@ func (s *ShipFrame) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"fuelCapacity\"")
 			}
 		case "requirements":
-			requiredBitSet[0] |= 1 << 7
+			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
 				if err := s.Requirements.Decode(d); err != nil {
 					return err
@@ -15971,8 +17564,9 @@ func (s *ShipFrame) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b11110111,
+	for i, mask := range [2]uint8{
+		0b11111111,
+		0b00000001,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -17628,10 +19222,12 @@ func (s *ShipReactor) encodeFields(e *jx.Encoder) {
 		e.Str(s.Description)
 	}
 	{
-		if s.Condition.Set {
-			e.FieldStart("condition")
-			s.Condition.Encode(e)
-		}
+		e.FieldStart("condition")
+		s.Condition.Encode(e)
+	}
+	{
+		e.FieldStart("integrity")
+		s.Integrity.Encode(e)
 	}
 	{
 		e.FieldStart("powerOutput")
@@ -17643,13 +19239,14 @@ func (s *ShipReactor) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfShipReactor = [6]string{
+var jsonFieldsNameOfShipReactor = [7]string{
 	0: "symbol",
 	1: "name",
 	2: "description",
 	3: "condition",
-	4: "powerOutput",
-	5: "requirements",
+	4: "integrity",
+	5: "powerOutput",
+	6: "requirements",
 }
 
 // Decode decodes ShipReactor from json.
@@ -17696,8 +19293,8 @@ func (s *ShipReactor) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"description\"")
 			}
 		case "condition":
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
-				s.Condition.Reset()
 				if err := s.Condition.Decode(d); err != nil {
 					return err
 				}
@@ -17705,8 +19302,18 @@ func (s *ShipReactor) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"condition\"")
 			}
-		case "powerOutput":
+		case "integrity":
 			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				if err := s.Integrity.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"integrity\"")
+			}
+		case "powerOutput":
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := d.Int()
 				s.PowerOutput = int(v)
@@ -17718,7 +19325,7 @@ func (s *ShipReactor) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"powerOutput\"")
 			}
 		case "requirements":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				if err := s.Requirements.Decode(d); err != nil {
 					return err
@@ -17737,7 +19344,7 @@ func (s *ShipReactor) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00110111,
+		0b01111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -19909,12 +21516,21 @@ func (s *SiphonResourcesCreatedData) encodeFields(e *jx.Encoder) {
 		e.FieldStart("cargo")
 		s.Cargo.Encode(e)
 	}
+	{
+		e.FieldStart("events")
+		e.ArrStart()
+		for _, elem := range s.Events {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
 }
 
-var jsonFieldsNameOfSiphonResourcesCreatedData = [3]string{
+var jsonFieldsNameOfSiphonResourcesCreatedData = [4]string{
 	0: "cooldown",
 	1: "siphon",
 	2: "cargo",
+	3: "events",
 }
 
 // Decode decodes SiphonResourcesCreatedData from json.
@@ -19956,6 +21572,24 @@ func (s *SiphonResourcesCreatedData) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"cargo\"")
 			}
+		case "events":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				s.Events = make([]SiphonResourcesCreatedDataEventsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem SiphonResourcesCreatedDataEventsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Events = append(s.Events, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"events\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -19966,7 +21600,7 @@ func (s *SiphonResourcesCreatedData) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000111,
+		0b00001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -20008,6 +21642,45 @@ func (s *SiphonResourcesCreatedData) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SiphonResourcesCreatedData) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SiphonResourcesCreatedDataEventsItem as json.
+func (s SiphonResourcesCreatedDataEventsItem) Encode(e *jx.Encoder) {
+	switch s.Type {
+	case ShipConditionEventSiphonResourcesCreatedDataEventsItem:
+		s.ShipConditionEvent.Encode(e)
+	}
+}
+
+// Decode decodes SiphonResourcesCreatedDataEventsItem from json.
+func (s *SiphonResourcesCreatedDataEventsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SiphonResourcesCreatedDataEventsItem to nil")
+	}
+	// Sum type type_discriminator.
+	switch t := d.Next(); t {
+	case jx.Object:
+		if err := s.ShipConditionEvent.Decode(d); err != nil {
+			return err
+		}
+		s.Type = ShipConditionEventSiphonResourcesCreatedDataEventsItem
+	default:
+		return errors.Errorf("unexpected json type %q", t)
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SiphonResourcesCreatedDataEventsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SiphonResourcesCreatedDataEventsItem) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

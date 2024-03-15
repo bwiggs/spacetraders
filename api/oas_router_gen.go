@@ -838,9 +838,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								}
 
 								elem = origElem
-							case 'r': // Prefix: "ref"
+							case 'r': // Prefix: "re"
 								origElem := elem
-								if l := len("ref"); len(elem) >= l && elem[0:l] == "ref" {
+								if l := len("re"); len(elem) >= l && elem[0:l] == "re" {
 									elem = elem[l:]
 								} else {
 									break
@@ -850,32 +850,70 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									break
 								}
 								switch elem[0] {
-								case 'i': // Prefix: "ine"
+								case 'f': // Prefix: "f"
 									origElem := elem
-									if l := len("ine"); len(elem) >= l && elem[0:l] == "ine" {
+									if l := len("f"); len(elem) >= l && elem[0:l] == "f" {
 										elem = elem[l:]
 									} else {
 										break
 									}
 
 									if len(elem) == 0 {
-										// Leaf node.
-										switch r.Method {
-										case "POST":
-											s.handleShipRefineRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										default:
-											s.notAllowed(w, r, "POST")
+										break
+									}
+									switch elem[0] {
+									case 'i': // Prefix: "ine"
+										origElem := elem
+										if l := len("ine"); len(elem) >= l && elem[0:l] == "ine" {
+											elem = elem[l:]
+										} else {
+											break
 										}
 
-										return
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "POST":
+												s.handleShipRefineRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "POST")
+											}
+
+											return
+										}
+
+										elem = origElem
+									case 'u': // Prefix: "uel"
+										origElem := elem
+										if l := len("uel"); len(elem) >= l && elem[0:l] == "uel" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "POST":
+												s.handleRefuelShipRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "POST")
+											}
+
+											return
+										}
+
+										elem = origElem
 									}
 
 									elem = origElem
-								case 'u': // Prefix: "uel"
+								case 'p': // Prefix: "pair"
 									origElem := elem
-									if l := len("uel"); len(elem) >= l && elem[0:l] == "uel" {
+									if l := len("pair"); len(elem) >= l && elem[0:l] == "pair" {
 										elem = elem[l:]
 									} else {
 										break
@@ -884,12 +922,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									if len(elem) == 0 {
 										// Leaf node.
 										switch r.Method {
+										case "GET":
+											s.handleGetRepairShipRequest([1]string{
+												args[0],
+											}, elemIsEscaped, w, r)
 										case "POST":
-											s.handleRefuelShipRequest([1]string{
+											s.handleRepairShipRequest([1]string{
 												args[0],
 											}, elemIsEscaped, w, r)
 										default:
-											s.notAllowed(w, r, "POST")
+											s.notAllowed(w, r, "GET,POST")
 										}
 
 										return
@@ -911,9 +953,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									break
 								}
 								switch elem[0] {
-								case 'c': // Prefix: "can/"
+								case 'c': // Prefix: "c"
 									origElem := elem
-									if l := len("can/"); len(elem) >= l && elem[0:l] == "can/" {
+									if l := len("c"); len(elem) >= l && elem[0:l] == "c" {
 										elem = elem[l:]
 									} else {
 										break
@@ -923,9 +965,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										break
 									}
 									switch elem[0] {
-									case 's': // Prefix: "s"
+									case 'a': // Prefix: "an/"
 										origElem := elem
-										if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
+										if l := len("an/"); len(elem) >= l && elem[0:l] == "an/" {
 											elem = elem[l:]
 										} else {
 											break
@@ -935,32 +977,70 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 											break
 										}
 										switch elem[0] {
-										case 'h': // Prefix: "hips"
+										case 's': // Prefix: "s"
 											origElem := elem
-											if l := len("hips"); len(elem) >= l && elem[0:l] == "hips" {
+											if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
 												elem = elem[l:]
 											} else {
 												break
 											}
 
 											if len(elem) == 0 {
-												// Leaf node.
-												switch r.Method {
-												case "POST":
-													s.handleCreateShipShipScanRequest([1]string{
-														args[0],
-													}, elemIsEscaped, w, r)
-												default:
-													s.notAllowed(w, r, "POST")
+												break
+											}
+											switch elem[0] {
+											case 'h': // Prefix: "hips"
+												origElem := elem
+												if l := len("hips"); len(elem) >= l && elem[0:l] == "hips" {
+													elem = elem[l:]
+												} else {
+													break
 												}
 
-												return
+												if len(elem) == 0 {
+													// Leaf node.
+													switch r.Method {
+													case "POST":
+														s.handleCreateShipShipScanRequest([1]string{
+															args[0],
+														}, elemIsEscaped, w, r)
+													default:
+														s.notAllowed(w, r, "POST")
+													}
+
+													return
+												}
+
+												elem = origElem
+											case 'y': // Prefix: "ystems"
+												origElem := elem
+												if l := len("ystems"); len(elem) >= l && elem[0:l] == "ystems" {
+													elem = elem[l:]
+												} else {
+													break
+												}
+
+												if len(elem) == 0 {
+													// Leaf node.
+													switch r.Method {
+													case "POST":
+														s.handleCreateShipSystemScanRequest([1]string{
+															args[0],
+														}, elemIsEscaped, w, r)
+													default:
+														s.notAllowed(w, r, "POST")
+													}
+
+													return
+												}
+
+												elem = origElem
 											}
 
 											elem = origElem
-										case 'y': // Prefix: "ystems"
+										case 'w': // Prefix: "waypoints"
 											origElem := elem
-											if l := len("ystems"); len(elem) >= l && elem[0:l] == "ystems" {
+											if l := len("waypoints"); len(elem) >= l && elem[0:l] == "waypoints" {
 												elem = elem[l:]
 											} else {
 												break
@@ -970,7 +1050,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 												// Leaf node.
 												switch r.Method {
 												case "POST":
-													s.handleCreateShipSystemScanRequest([1]string{
+													s.handleCreateShipWaypointScanRequest([1]string{
 														args[0],
 													}, elemIsEscaped, w, r)
 												default:
@@ -984,9 +1064,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										}
 
 										elem = origElem
-									case 'w': // Prefix: "waypoints"
+									case 'r': // Prefix: "rap"
 										origElem := elem
-										if l := len("waypoints"); len(elem) >= l && elem[0:l] == "waypoints" {
+										if l := len("rap"); len(elem) >= l && elem[0:l] == "rap" {
 											elem = elem[l:]
 										} else {
 											break
@@ -995,12 +1075,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										if len(elem) == 0 {
 											// Leaf node.
 											switch r.Method {
+											case "GET":
+												s.handleGetScrapShipRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
 											case "POST":
-												s.handleCreateShipWaypointScanRequest([1]string{
+												s.handleScrapShipRequest([1]string{
 													args[0],
 												}, elemIsEscaped, w, r)
 											default:
-												s.notAllowed(w, r, "POST")
+												s.notAllowed(w, r, "GET,POST")
 											}
 
 											return
@@ -2362,9 +2446,9 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								}
 
 								elem = origElem
-							case 'r': // Prefix: "ref"
+							case 'r': // Prefix: "re"
 								origElem := elem
-								if l := len("ref"); len(elem) >= l && elem[0:l] == "ref" {
+								if l := len("re"); len(elem) >= l && elem[0:l] == "re" {
 									elem = elem[l:]
 								} else {
 									break
@@ -2374,34 +2458,74 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									break
 								}
 								switch elem[0] {
-								case 'i': // Prefix: "ine"
+								case 'f': // Prefix: "f"
 									origElem := elem
-									if l := len("ine"); len(elem) >= l && elem[0:l] == "ine" {
+									if l := len("f"); len(elem) >= l && elem[0:l] == "f" {
 										elem = elem[l:]
 									} else {
 										break
 									}
 
 									if len(elem) == 0 {
-										switch method {
-										case "POST":
-											// Leaf: ShipRefine
-											r.name = "ShipRefine"
-											r.summary = "Ship Refine"
-											r.operationID = "ship-refine"
-											r.pathPattern = "/my/ships/{shipSymbol}/refine"
-											r.args = args
-											r.count = 1
-											return r, true
-										default:
-											return
+										break
+									}
+									switch elem[0] {
+									case 'i': // Prefix: "ine"
+										origElem := elem
+										if l := len("ine"); len(elem) >= l && elem[0:l] == "ine" {
+											elem = elem[l:]
+										} else {
+											break
 										}
+
+										if len(elem) == 0 {
+											switch method {
+											case "POST":
+												// Leaf: ShipRefine
+												r.name = "ShipRefine"
+												r.summary = "Ship Refine"
+												r.operationID = "ship-refine"
+												r.pathPattern = "/my/ships/{shipSymbol}/refine"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+
+										elem = origElem
+									case 'u': // Prefix: "uel"
+										origElem := elem
+										if l := len("uel"); len(elem) >= l && elem[0:l] == "uel" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											switch method {
+											case "POST":
+												// Leaf: RefuelShip
+												r.name = "RefuelShip"
+												r.summary = "Refuel Ship"
+												r.operationID = "refuel-ship"
+												r.pathPattern = "/my/ships/{shipSymbol}/refuel"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+
+										elem = origElem
 									}
 
 									elem = origElem
-								case 'u': // Prefix: "uel"
+								case 'p': // Prefix: "pair"
 									origElem := elem
-									if l := len("uel"); len(elem) >= l && elem[0:l] == "uel" {
+									if l := len("pair"); len(elem) >= l && elem[0:l] == "pair" {
 										elem = elem[l:]
 									} else {
 										break
@@ -2409,12 +2533,21 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 
 									if len(elem) == 0 {
 										switch method {
+										case "GET":
+											// Leaf: GetRepairShip
+											r.name = "GetRepairShip"
+											r.summary = "Get Repair Ship"
+											r.operationID = "get-repair-ship"
+											r.pathPattern = "/my/ships/{shipSymbol}/repair"
+											r.args = args
+											r.count = 1
+											return r, true
 										case "POST":
-											// Leaf: RefuelShip
-											r.name = "RefuelShip"
-											r.summary = "Refuel Ship"
-											r.operationID = "refuel-ship"
-											r.pathPattern = "/my/ships/{shipSymbol}/refuel"
+											// Leaf: RepairShip
+											r.name = "RepairShip"
+											r.summary = "Repair Ship"
+											r.operationID = "repair-ship"
+											r.pathPattern = "/my/ships/{shipSymbol}/repair"
 											r.args = args
 											r.count = 1
 											return r, true
@@ -2439,9 +2572,9 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									break
 								}
 								switch elem[0] {
-								case 'c': // Prefix: "can/"
+								case 'c': // Prefix: "c"
 									origElem := elem
-									if l := len("can/"); len(elem) >= l && elem[0:l] == "can/" {
+									if l := len("c"); len(elem) >= l && elem[0:l] == "c" {
 										elem = elem[l:]
 									} else {
 										break
@@ -2451,9 +2584,9 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										break
 									}
 									switch elem[0] {
-									case 's': // Prefix: "s"
+									case 'a': // Prefix: "an/"
 										origElem := elem
-										if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
+										if l := len("an/"); len(elem) >= l && elem[0:l] == "an/" {
 											elem = elem[l:]
 										} else {
 											break
@@ -2463,34 +2596,74 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											break
 										}
 										switch elem[0] {
-										case 'h': // Prefix: "hips"
+										case 's': // Prefix: "s"
 											origElem := elem
-											if l := len("hips"); len(elem) >= l && elem[0:l] == "hips" {
+											if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
 												elem = elem[l:]
 											} else {
 												break
 											}
 
 											if len(elem) == 0 {
-												switch method {
-												case "POST":
-													// Leaf: CreateShipShipScan
-													r.name = "CreateShipShipScan"
-													r.summary = "Scan Ships"
-													r.operationID = "create-ship-ship-scan"
-													r.pathPattern = "/my/ships/{shipSymbol}/scan/ships"
-													r.args = args
-													r.count = 1
-													return r, true
-												default:
-													return
+												break
+											}
+											switch elem[0] {
+											case 'h': // Prefix: "hips"
+												origElem := elem
+												if l := len("hips"); len(elem) >= l && elem[0:l] == "hips" {
+													elem = elem[l:]
+												} else {
+													break
 												}
+
+												if len(elem) == 0 {
+													switch method {
+													case "POST":
+														// Leaf: CreateShipShipScan
+														r.name = "CreateShipShipScan"
+														r.summary = "Scan Ships"
+														r.operationID = "create-ship-ship-scan"
+														r.pathPattern = "/my/ships/{shipSymbol}/scan/ships"
+														r.args = args
+														r.count = 1
+														return r, true
+													default:
+														return
+													}
+												}
+
+												elem = origElem
+											case 'y': // Prefix: "ystems"
+												origElem := elem
+												if l := len("ystems"); len(elem) >= l && elem[0:l] == "ystems" {
+													elem = elem[l:]
+												} else {
+													break
+												}
+
+												if len(elem) == 0 {
+													switch method {
+													case "POST":
+														// Leaf: CreateShipSystemScan
+														r.name = "CreateShipSystemScan"
+														r.summary = "Scan Systems"
+														r.operationID = "create-ship-system-scan"
+														r.pathPattern = "/my/ships/{shipSymbol}/scan/systems"
+														r.args = args
+														r.count = 1
+														return r, true
+													default:
+														return
+													}
+												}
+
+												elem = origElem
 											}
 
 											elem = origElem
-										case 'y': // Prefix: "ystems"
+										case 'w': // Prefix: "waypoints"
 											origElem := elem
-											if l := len("ystems"); len(elem) >= l && elem[0:l] == "ystems" {
+											if l := len("waypoints"); len(elem) >= l && elem[0:l] == "waypoints" {
 												elem = elem[l:]
 											} else {
 												break
@@ -2499,11 +2672,11 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											if len(elem) == 0 {
 												switch method {
 												case "POST":
-													// Leaf: CreateShipSystemScan
-													r.name = "CreateShipSystemScan"
-													r.summary = "Scan Systems"
-													r.operationID = "create-ship-system-scan"
-													r.pathPattern = "/my/ships/{shipSymbol}/scan/systems"
+													// Leaf: CreateShipWaypointScan
+													r.name = "CreateShipWaypointScan"
+													r.summary = "Scan Waypoints"
+													r.operationID = "create-ship-waypoint-scan"
+													r.pathPattern = "/my/ships/{shipSymbol}/scan/waypoints"
 													r.args = args
 													r.count = 1
 													return r, true
@@ -2516,9 +2689,9 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										}
 
 										elem = origElem
-									case 'w': // Prefix: "waypoints"
+									case 'r': // Prefix: "rap"
 										origElem := elem
-										if l := len("waypoints"); len(elem) >= l && elem[0:l] == "waypoints" {
+										if l := len("rap"); len(elem) >= l && elem[0:l] == "rap" {
 											elem = elem[l:]
 										} else {
 											break
@@ -2526,12 +2699,21 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 
 										if len(elem) == 0 {
 											switch method {
+											case "GET":
+												// Leaf: GetScrapShip
+												r.name = "GetScrapShip"
+												r.summary = "Get Scrap Ship"
+												r.operationID = "get-scrap-ship"
+												r.pathPattern = "/my/ships/{shipSymbol}/scrap"
+												r.args = args
+												r.count = 1
+												return r, true
 											case "POST":
-												// Leaf: CreateShipWaypointScan
-												r.name = "CreateShipWaypointScan"
-												r.summary = "Scan Waypoints"
-												r.operationID = "create-ship-waypoint-scan"
-												r.pathPattern = "/my/ships/{shipSymbol}/scan/waypoints"
+												// Leaf: ScrapShip
+												r.name = "ScrapShip"
+												r.summary = "Scrap Ship"
+												r.operationID = "scrap-ship"
+												r.pathPattern = "/my/ships/{shipSymbol}/scrap"
 												r.args = args
 												r.count = 1
 												return r, true

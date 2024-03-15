@@ -18,6 +18,8 @@ func LogAgentMetrics(client *api.Client) error {
 		return err
 	}
 
+	slog.Info("LogAgentMetrics", "credits", dat.Data.Credits)
+
 	err = postInflux("agent", "credits", dat.Data.Credits)
 	if err != nil {
 		return err
@@ -31,8 +33,8 @@ func LogAgentMetrics(client *api.Client) error {
 
 // TODO: move this into a metrics or monitoring package
 func postInflux(measurement string, field string, value any) error {
-	slog.Debug("posting to influx", "measurement", measurement, "field", field, "value", value)
-	client := influxdb2.NewClient("http://localhost:53086", "9zL3uLzosPFVKNLWHG2so1XQ1990MYSh69VUAFe_WyB5XRW4fwrm_eHMoxdt36qiAz1PwFGtLhX__7ofpVXdKA==")
+	// slog.Debug("posting to influx", "measurement", measurement, "field", field, "value", value)
+	client := influxdb2.NewClient("http://localhost:53086", "i8foeR24mu2rd1FEbd77K50oXWEI151Dv9P82Kuf-31WCsdNxs65T94u0UwifwGvirq2759bhw1LX11Pg6ATXw==")
 	writeAPI := client.WriteAPIBlocking("spacetraders", "spacetraders")
 
 	fields := make(map[string]interface{})
