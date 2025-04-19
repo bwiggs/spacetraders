@@ -12,9 +12,46 @@ import (
 	"golang.org/x/image/colornames"
 )
 
+func (g *Game) DrawSystems(screen *ebiten.Image, systems []models.System) {
+	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
+	minX, maxX, minY, maxY := g.camera.GetWorldBounds(sw, sh, g.systemSize)
+	for i := range systems {
+		// cull if it's offscreen
+		wx := float32(systems[i].X)
+		wy := float32(systems[i].Y)
+
+		if wx < minX || wx > maxX || wy < minY || wy > maxY {
+			continue
+		}
+
+		g.DrawSystem(screen, systems[i])
+	}
+}
+
+func (g *Game) DrawSystem(screen *ebiten.Image, system models.System) {
+	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
+	sx, sy := g.camera.WorldToScreen(float64(system.X), float64(system.Y), sw, sh, g.systemSize)
+
+	size := float32(1)
+	if g.camera.Zoom > .08 {
+		size = 2
+	}
+
+	c := constellationColors[system.Constellation]
+	if c == nil {
+		c = colornames.White
+	}
+	if system.Symbol == currSystem {
+		c = colornames.Lime
+		size = size * 2
+	}
+
+	vector.DrawFilledRect(screen, float32(sx), float32(sy), size, size, c, antialias)
+}
+
 func (g *Game) DrawWaypoints(screen *ebiten.Image, waypoints []models.Waypoint) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
-	minX, maxX, minY, maxY := g.camera.GetWorldBounds(sw, sh, g.worldSize)
+	minX, maxX, minY, maxY := g.camera.GetWorldBounds(sw, sh, g.systemSize)
 
 	for _, wp := range waypoints {
 
@@ -30,34 +67,40 @@ func (g *Game) DrawWaypoints(screen *ebiten.Image, waypoints []models.Waypoint) 
 			continue
 		}
 
-		c, ok := WaypointTypeColors[wp.Type]
-		if !ok {
-			c = colornames.White
-		}
+		g.DrawWaypoint(screen, wp)
+	}
+}
 
-		r := float32(1)
-		if wp.Type == "STAR" {
-			r = float32(4)
-		} else if wp.Type == "PLANET" {
-			r = float32(2)
-		}
+func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
+	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 
-		// draw waypoint
-		sx, sy := g.camera.WorldToScreen(float64(wp.X), float64(wp.Y), sw, sh, g.worldSize)
-		vector.DrawFilledCircle(screen, float32(sx), float32(sy), r*float32(g.camera.Zoom), c, antialias)
+	c, ok := WaypointTypeColors[waypoint.Type]
+	if !ok {
+		c = colornames.White
+	}
 
-		// render waypoint label
-		if g.camera.Zoom > 2.0 {
+	r := float32(1)
+	if waypoint.Type == "STAR" {
+		r = float32(4)
+	} else if waypoint.Type == "PLANET" {
+		r = float32(2)
+	}
 
-			textX := int(sx) + 10 + int(float64(r)*g.camera.Zoom) // shift text a bit right of the circle
-			textY := int(sy) - 1                                  // shift text a bit up
+	// draw waypoint
+	sx, sy := g.camera.WorldToScreen(float64(waypoint.X), float64(waypoint.Y), sw, sh, g.systemSize)
+	vector.DrawFilledCircle(screen, float32(sx), float32(sy), r*float32(g.camera.Zoom), c, antialias)
 
-			parts := strings.Split(wp.Symbol, "-")
-			id := parts[len(parts)-1]
+	// render waypoint label
+	if g.camera.Zoom > 2.0 {
 
-			text.Draw(screen, wp.Type, defaultFont, textX, textY, g.colors.WaypointLabelColor)
-			text.Draw(screen, id, defaultFont, textX, textY+18, g.colors.WaypointLabelColor)
-		}
+		textX := int(sx) + 10 + int(float64(r)*g.camera.Zoom) // shift text a bit right of the circle
+		textY := int(sy) - 1                                  // shift text a bit up
+
+		parts := strings.Split(waypoint.Symbol, "-")
+		id := parts[len(parts)-1]
+
+		text.Draw(screen, waypoint.Type, defaultFont, textX, textY, g.colors.WaypointLabelColor)
+		text.Draw(screen, id, defaultFont, textX, textY+18, g.colors.WaypointLabelColor)
 	}
 }
 
@@ -69,8 +112,8 @@ func (g *Game) DrawDistanceRings(screen *ebiten.Image) {
 	for i := 1.0; i < 9; i++ {
 		radius := i * 100.0
 
-		orbitX, orbitY := g.camera.WorldToScreen(centerX, centerY, sw, sh, g.worldSize)
-		scale, _, _ := g.camera.GetTransform(sw, sh, g.worldSize)
+		orbitX, orbitY := g.camera.WorldToScreen(centerX, centerY, sw, sh, g.systemSize)
+		scale, _, _ := g.camera.GetTransform(sw, sh, g.systemSize)
 
 		vector.StrokeCircle(
 			screen,
@@ -102,8 +145,8 @@ func (g *Game) DrawWaypointOrbit(screen *ebiten.Image, wp models.Waypoint) {
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 
-	orbitX, orbitY := g.camera.WorldToScreen(0.0, 0.0, sw, sh, g.worldSize)
-	scale, _, _ := g.camera.GetTransform(sw, sh, g.worldSize)
+	orbitX, orbitY := g.camera.WorldToScreen(0.0, 0.0, sw, sh, g.systemSize)
+	scale, _, _ := g.camera.GetTransform(sw, sh, g.systemSize)
 
 	vector.StrokeCircle(
 		screen,

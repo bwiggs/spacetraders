@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 
+	"github.com/bwiggs/spacetraders-go/models"
 	"github.com/bwiggs/spacetraders-go/repo"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -12,8 +13,11 @@ import (
 )
 
 type Game struct {
-	camera    *Camera2D
-	worldSize float64
+	camera     *Camera2D
+	systemSize float64
+	galaxySize float64
+
+	mode ViewMode
 
 	repo *repo.Repo
 	// scale        float64
@@ -24,12 +28,20 @@ type Game struct {
 	colors GameColors
 }
 
+type ViewMode int
+
+const (
+	SystemMode ViewMode = iota
+	GalaxyMode
+)
+
 func NewGame(r *repo.Repo) *Game {
 	g := &Game{
-		camera:    NewCamera2D(),
-		worldSize: 2000.0,
-		repo:      r,
-		// scale:        1.0, // default zoom level
+		camera:       NewCamera2D(),
+		mode:         SystemMode,
+		systemSize:   2000.0,
+		galaxySize:   2000.0,
+		repo:         r,
 		cameraOffset: [2]float64{0, 0},
 		colors: GameColors{
 			Background:    color.RGBA{R: 0, G: 9, B: 22, A: 255},
@@ -62,7 +74,7 @@ func (g *Game) Update() error {
 		mouseScreenY := float64(my)
 
 		// 1. World position under cursor before zoom
-		worldBeforeX, worldBeforeY := g.camera.ScreenToWorld(mouseScreenX, mouseScreenY, sw, sh, g.worldSize)
+		worldBeforeX, worldBeforeY := g.camera.ScreenToWorld(mouseScreenX, mouseScreenY, sw, sh, g.systemSize)
 
 		// 2. Apply zoom
 		zoomFactor := 1 + scrollY*0.02
@@ -70,7 +82,7 @@ func (g *Game) Update() error {
 		g.camera.Zoom = Clamp(newZoom, float64(minZoom), float64(maxZoom))
 
 		// 3. World position under cursor after zoom
-		worldAfterX, worldAfterY := g.camera.ScreenToWorld(mouseScreenX, mouseScreenY, sw, sh, g.worldSize)
+		worldAfterX, worldAfterY := g.camera.ScreenToWorld(mouseScreenX, mouseScreenY, sw, sh, g.systemSize)
 
 		// 4. Adjust camera center so world stays locked to cursor
 		g.camera.CenterX += worldBeforeX - worldAfterX
@@ -89,13 +101,13 @@ func (g *Game) Update() error {
 			prevWorldX, prevWorldY := g.camera.ScreenToWorld(
 				float64(g.lastMousePos[0]),
 				float64(g.lastMousePos[1]),
-				sw, sh, g.worldSize,
+				sw, sh, g.systemSize,
 			)
 
 			currWorldX, currWorldY := g.camera.ScreenToWorld(
 				float64(x),
 				float64(y),
-				sw, sh, g.worldSize,
+				sw, sh, g.systemSize,
 			)
 
 			dx := prevWorldX - currWorldX
@@ -113,12 +125,42 @@ func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyC) {
 		g.camera.CenterX = 0
 		g.camera.CenterY = 0
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyG) {
+		g.camera.CenterX = 0
+		g.camera.CenterY = 0
 		g.camera.Zoom = minZoom
 	}
 
-	g.colors.DistanceRings = fadeColorWithZoom(g.camera.Zoom, 1.2, 5.0, 0.1, .6, g.colors.Secondary)
-	g.colors.WaypointOrbit = fadeColorWithZoom(g.camera.Zoom, 1.5, 5.0, 0, .1, g.colors.Primary)
-	g.colors.WaypointLabelColor = fadeColorWithZoom(g.camera.Zoom, 2, 5.0, 0, 1, colornames.White)
+	if ebiten.IsKeyPressed(ebiten.KeyS) {
+		g.camera.CenterX = 0
+		g.camera.CenterY = 0
+		g.camera.Zoom = defaultZoom
+	}
+
+	currMode := g.mode
+	if g.camera.Zoom < zoomModeThresh {
+		g.mode = GalaxyMode
+	} else {
+		g.mode = SystemMode
+	}
+
+	if g.mode != currMode {
+		// Reset camera position when switching modes
+		if g.mode == GalaxyMode {
+			sysCoords := systemCoords[currSystem]
+			g.camera.LookAt(sysCoords[0], sysCoords[1])
+		} else {
+			g.camera.LookAt(0, 0)
+		}
+	}
+
+	if g.mode == SystemMode {
+		g.colors.DistanceRings = fadeColorWithZoom(g.camera.Zoom, 1.2, 5.0, 0.1, .6, g.colors.Secondary)
+		g.colors.WaypointOrbit = fadeColorWithZoom(g.camera.Zoom, 1.5, 5.0, 0, .1, g.colors.Primary)
+		g.colors.WaypointLabelColor = fadeColorWithZoom(g.camera.Zoom, 2, 5.0, 0, 1, colornames.White)
+	}
 
 	return nil
 }
@@ -129,10 +171,24 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 
+	g.DrawWaypoint(screen, models.Waypoint{X: 0, Y: 0, Type: "STAR", Symbol: viper.GetString("SYSTEM")})
+
+	if g.camera.Zoom >= zoomModeThresh {
+		g.DrawSystemUI(screen)
+	} else if g.camera.Zoom < zoomModeThresh {
+		g.DrawGalaxyUI(screen)
+	}
+
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("%s | TPS: %.2f | ZOOM: %.3f | %dx%d", viper.GetString("SYSTEM"), ebiten.ActualTPS(), g.camera.Zoom, sw, sh))
+}
+
+func (g *Game) DrawSystemUI(screen *ebiten.Image) {
 	g.DrawDistanceRings(screen)
 	g.DrawWaypointOrbits(screen, waypoints)
 	g.DrawWaypoints(screen, waypoints)
 	g.DrawWaypointList(screen, waypoints)
+}
 
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("%s | TPS: %.2f | ZOOM: %.2f | %dx%d", viper.GetString("SYSTEM"), ebiten.ActualTPS(), g.camera.Zoom, sw, sh))
+func (g *Game) DrawGalaxyUI(screen *ebiten.Image) {
+	g.DrawSystems(screen, systems)
 }

@@ -15,8 +15,14 @@ func NewCamera2D() *Camera2D {
 	return &Camera2D{
 		CenterX: 0,
 		CenterY: 0,
-		Zoom:    minZoom,
+		Zoom:    1.2,
 	}
+}
+
+// LookAt sets the camera to center on the given world coordinates
+func (c *Camera2D) LookAt(x, y float64) {
+	c.CenterX = x
+	c.CenterY = y
 }
 
 // GetTransform returns the world->screen scale and offset

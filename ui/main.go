@@ -9,6 +9,7 @@ import (
 	"github.com/bwiggs/spacetraders-go/repo"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/spf13/viper"
+	"golang.org/x/exp/rand"
 	"golang.org/x/image/font"
 
 	"net/http"
@@ -25,12 +26,18 @@ var defaultFont font.Face
 var hudFont font.Face
 
 const (
-	antialias = true
-	minZoom   = 1.2
-	maxZoom   = 25.0
+	antialias      = true
+	defaultZoom    = 1.2
+	zoomModeThresh = .6
+	minZoom        = .015
+	maxZoom        = 15.0
 )
 
+var currSystem string
 var waypoints []models.Waypoint
+var systems []models.System
+var systemCoords map[string][]float64
+var constellationColors map[string]color.Color
 var backgroundColor = color.RGBA{R: 0, G: 9, B: 22, A: 255}
 
 func main() {
@@ -45,14 +52,26 @@ func main() {
 		log.Fatal(err)
 	}
 
-	wps, err := r.GetWaypoints(viper.GetString("SYSTEM"))
+	currSystem = viper.GetString("SYSTEM")
+
+	waypoints, err = r.GetWaypoints(currSystem)
 	if err != nil {
 		log.Fatal(err)
 	}
-	waypoints = wps
 
-	// add the home star to the center
-	waypoints = append(waypoints, models.Waypoint{X: 0, Y: 0, Type: "STAR", Symbol: viper.GetString("SYSTEM")})
+	systems, err = r.GetSystems()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	systemCoords = make(map[string][]float64)
+	constellationColors = make(map[string]color.Color)
+	for _, system := range systems {
+		systemCoords[system.Symbol] = []float64{float64(system.X), float64(system.Y)}
+		if _, found := constellationColors[system.Constellation]; !found {
+			constellationColors[system.Constellation] = color.NRGBA{R: uint8(rand.Intn(156) + 100), G: uint8(rand.Intn(156) + 100), B: uint8(rand.Intn(156) + 100), A: 255}
+		}
+	}
 
 	// compute distance from center for each waypoint
 	for i := 0; i < len(waypoints); i++ {

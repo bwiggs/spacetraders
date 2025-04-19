@@ -2,6 +2,7 @@ package repo
 
 import (
 	"github.com/bwiggs/spacetraders-go/api"
+	"github.com/bwiggs/spacetraders-go/models"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -27,4 +28,10 @@ func (r *Repo) UpsertSystems(systems []api.System) error {
 	tx.Commit()
 
 	return nil
+}
+
+func (r *Repo) GetSystems() ([]models.System, error) {
+	systems := []models.System{}
+	err := r.db.Select(&systems, "SELECT * FROM systems")
+	return systems, err
 }
