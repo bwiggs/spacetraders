@@ -1065,18 +1065,6 @@ func (s *ExtractResourcesCreatedData) Validate() error {
 	return nil
 }
 
-func (s ExtractResourcesCreatedDataEventsItem) Validate() error {
-	switch s.Type {
-	case ShipConditionEventExtractResourcesCreatedDataEventsItem:
-		if err := s.ShipConditionEvent.Validate(); err != nil {
-			return err
-		}
-		return nil
-	default:
-		return errors.Errorf("invalid type %q", s.Type)
-	}
-}
-
 func (s *ExtractResourcesReq) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -1203,18 +1191,6 @@ func (s *ExtractResourcesWithSurveyCreatedData) Validate() error {
 	return nil
 }
 
-func (s ExtractResourcesWithSurveyCreatedDataEventsItem) Validate() error {
-	switch s.Type {
-	case ShipConditionEventExtractResourcesWithSurveyCreatedDataEventsItem:
-		if err := s.ShipConditionEvent.Validate(); err != nil {
-			return err
-		}
-		return nil
-	default:
-		return errors.Errorf("invalid type %q", s.Type)
-	}
-}
-
 func (s *Extraction) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -1336,16 +1312,23 @@ func (s *Faction) Validate() error {
 		})
 	}
 	if err := func() error {
-		if err := (validate.String{
-			MinLength:    1,
-			MinLengthSet: true,
-			MaxLength:    0,
-			MaxLengthSet: false,
-			Email:        false,
-			Hostname:     false,
-			Regex:        nil,
-		}).Validate(string(s.Headquarters)); err != nil {
-			return errors.Wrap(err, "string")
+		if value, ok := s.Headquarters.Get(); ok {
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:    1,
+					MinLengthSet: true,
+					MaxLength:    0,
+					MaxLengthSet: false,
+					Email:        false,
+					Hostname:     false,
+					Regex:        nil,
+				}).Validate(string(value)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -2204,6 +2187,46 @@ func (s *GetShipCooldownOK) Validate() error {
 	return nil
 }
 
+func (s *GetShipModulesOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Data == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Data {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *GetShipNavOK) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -2598,6 +2621,91 @@ func (s *InstallMountCreatedData) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "transaction",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *InstallShipModuleCreated) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *InstallShipModuleCreatedData) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Agent.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "agent",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Modules == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Modules {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "modules",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Cargo.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "cargo",
 			Error: err,
 		})
 	}
@@ -3353,18 +3461,6 @@ func (s *NavigateShipOKData) Validate() error {
 	return nil
 }
 
-func (s NavigateShipOKDataEventsItem) Validate() error {
-	switch s.Type {
-	case ShipConditionEventNavigateShipOKDataEventsItem:
-		if err := s.ShipConditionEvent.Validate(); err != nil {
-			return err
-		}
-		return nil
-	default:
-		return errors.Errorf("invalid type %q", s.Type)
-	}
-}
-
 func (s *NegotiateContractCreated) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -3471,6 +3567,68 @@ func (s *PatchShipNavOK) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *PatchShipNavOKData) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Nav.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "nav",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Fuel.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "fuel",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Events == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Events {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "events",
 			Error: err,
 		})
 	}
@@ -3862,13 +4020,27 @@ func (s *RegisterCreatedData) Validate() error {
 		})
 	}
 	if err := func() error {
-		if err := s.Ship.Validate(); err != nil {
-			return err
+		var failures []validate.FieldError
+		for i, elem := range s.Ships {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "ship",
+			Name:  "ships",
 			Error: err,
 		})
 	}
@@ -4007,6 +4179,91 @@ func (s *RemoveMountCreatedData) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "transaction",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *RemoveShipModuleCreated) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *RemoveShipModuleCreatedData) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Agent.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "agent",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Modules == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Modules {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "modules",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Cargo.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "cargo",
 			Error: err,
 		})
 	}
@@ -4874,6 +5131,14 @@ func (s ShipComponentIntegrity) Validate() error {
 	return nil
 }
 
+func (s ShipComponentQuality) Validate() error {
+	alias := (float64)(s)
+	if err := (validate.Float{}).Validate(float64(alias)); err != nil {
+		return errors.Wrap(err, "float")
+	}
+	return nil
+}
+
 func (s *ShipConditionEvent) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -5115,6 +5380,17 @@ func (s *ShipEngine) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if err := s.Quality.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "quality",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
@@ -5235,6 +5511,17 @@ func (s *ShipFrame) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if err := s.Quality.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "quality",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
@@ -5272,6 +5559,8 @@ func (s ShipFrameSymbol) Validate() error {
 	case "FRAME_CRUISER":
 		return nil
 	case "FRAME_CARRIER":
+		return nil
+	case "FRAME_BULK_FREIGHTER":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -5924,6 +6213,17 @@ func (s *ShipReactor) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if err := s.Quality.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "quality",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
@@ -6195,6 +6495,8 @@ func (s ShipType) Validate() error {
 	case "SHIP_REFINING_FREIGHTER":
 		return nil
 	case "SHIP_SURVEYOR":
+		return nil
+	case "SHIP_BULK_FREIGHTER":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -6653,18 +6955,6 @@ func (s *SiphonResourcesCreatedData) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
-}
-
-func (s SiphonResourcesCreatedDataEventsItem) Validate() error {
-	switch s.Type {
-	case ShipConditionEventSiphonResourcesCreatedDataEventsItem:
-		if err := s.ShipConditionEvent.Validate(); err != nil {
-			return err
-		}
-		return nil
-	default:
-		return errors.Errorf("invalid type %q", s.Type)
-	}
 }
 
 func (s *SiphonYield) Validate() error {
@@ -7319,6 +7609,8 @@ func (s TradeSymbol) Validate() error {
 		return nil
 	case "FRAME_CARRIER":
 		return nil
+	case "FRAME_BULK_FREIGHTER":
+		return nil
 	case "REACTOR_SOLAR_I":
 		return nil
 	case "REACTOR_FUSION_I":
@@ -7430,6 +7722,8 @@ func (s TradeSymbol) Validate() error {
 	case "SHIP_REFINING_FREIGHTER":
 		return nil
 	case "SHIP_SURVEYOR":
+		return nil
+	case "SHIP_BULK_FREIGHTER":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)

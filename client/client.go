@@ -11,7 +11,11 @@ var client *api.Client
 
 type TokenProvider struct{}
 
-func (tp TokenProvider) AgentToken(ctx context.Context, operationName string) (api.AgentToken, error) {
+func (tp TokenProvider) AccountToken(ctx context.Context, operationName api.OperationName) (api.AccountToken, error) {
+	return api.AccountToken{Token: viper.GetString("API_TOKEN")}, nil
+}
+
+func (tp TokenProvider) AgentToken(ctx context.Context, operationName api.OperationName) (api.AgentToken, error) {
 	return api.AgentToken{Token: viper.GetString("API_TOKEN")}, nil
 }
 

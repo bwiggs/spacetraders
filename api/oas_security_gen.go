@@ -14,10 +14,14 @@ import (
 
 // SecurityHandler is handler for security parameters.
 type SecurityHandler interface {
+	// HandleAccountToken handles AccountToken security.
+	// When you create an account you will be able to generate a private bearer token which grants
+	// authorization to create agents.
+	HandleAccountToken(ctx context.Context, operationName OperationName, t AccountToken) (context.Context, error)
 	// HandleAgentToken handles AgentToken security.
 	// When you register a new agent you will be granted a private bearer token which grants
-	// authorization to use the API.
-	HandleAgentToken(ctx context.Context, operationName string, t AgentToken) (context.Context, error)
+	// authorization to use the API during a specific reset.
+	HandleAgentToken(ctx context.Context, operationName OperationName, t AgentToken) (context.Context, error)
 }
 
 func findAuthorization(h http.Header, prefix string) (string, bool) {
@@ -35,7 +39,22 @@ func findAuthorization(h http.Header, prefix string) (string, bool) {
 	return "", false
 }
 
-func (s *Server) securityAgentToken(ctx context.Context, operationName string, req *http.Request) (context.Context, bool, error) {
+func (s *Server) securityAccountToken(ctx context.Context, operationName OperationName, req *http.Request) (context.Context, bool, error) {
+	var t AccountToken
+	token, ok := findAuthorization(req.Header, "Bearer")
+	if !ok {
+		return ctx, false, nil
+	}
+	t.Token = token
+	rctx, err := s.sec.HandleAccountToken(ctx, operationName, t)
+	if errors.Is(err, ogenerrors.ErrSkipServerSecurity) {
+		return nil, false, nil
+	} else if err != nil {
+		return nil, false, err
+	}
+	return rctx, true, err
+}
+func (s *Server) securityAgentToken(ctx context.Context, operationName OperationName, req *http.Request) (context.Context, bool, error) {
 	var t AgentToken
 	token, ok := findAuthorization(req.Header, "Bearer")
 	if !ok {
@@ -53,13 +72,25 @@ func (s *Server) securityAgentToken(ctx context.Context, operationName string, r
 
 // SecuritySource is provider of security values (tokens, passwords, etc.).
 type SecuritySource interface {
+	// AccountToken provides AccountToken security value.
+	// When you create an account you will be able to generate a private bearer token which grants
+	// authorization to create agents.
+	AccountToken(ctx context.Context, operationName OperationName) (AccountToken, error)
 	// AgentToken provides AgentToken security value.
 	// When you register a new agent you will be granted a private bearer token which grants
-	// authorization to use the API.
-	AgentToken(ctx context.Context, operationName string) (AgentToken, error)
+	// authorization to use the API during a specific reset.
+	AgentToken(ctx context.Context, operationName OperationName) (AgentToken, error)
 }
 
-func (s *Client) securityAgentToken(ctx context.Context, operationName string, req *http.Request) error {
+func (s *Client) securityAccountToken(ctx context.Context, operationName OperationName, req *http.Request) error {
+	t, err := s.sec.AccountToken(ctx, operationName)
+	if err != nil {
+		return errors.Wrap(err, "security source \"AccountToken\"")
+	}
+	req.Header.Set("Authorization", "Bearer "+t.Token)
+	return nil
+}
+func (s *Client) securityAgentToken(ctx context.Context, operationName OperationName, req *http.Request) error {
 	t, err := s.sec.AgentToken(ctx, operationName)
 	if err != nil {
 		return errors.Wrap(err, "security source \"AgentToken\"")

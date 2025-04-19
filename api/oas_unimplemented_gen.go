@@ -318,6 +318,15 @@ func (UnimplementedHandler) GetShipCooldown(ctx context.Context, params GetShipC
 	return r, ht.ErrNotImplemented
 }
 
+// GetShipModules implements get-ship-modules operation.
+//
+// Get the modules installed on a ship.
+//
+// GET /my/ships/{shipSymbol}/modules
+func (UnimplementedHandler) GetShipModules(ctx context.Context, params GetShipModulesParams) (r *GetShipModulesOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetShipNav implements get-ship-nav operation.
 //
 // Get the current nav status of a ship.
@@ -346,6 +355,15 @@ func (UnimplementedHandler) GetShipyard(ctx context.Context, params GetShipyardP
 //
 // GET /
 func (UnimplementedHandler) GetStatus(ctx context.Context) (r *GetStatusOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetSupplyChain implements get-supply-chain operation.
+//
+// Describes which import and exports map to each other.
+//
+// GET /market/supply-chain
+func (UnimplementedHandler) GetSupplyChain(ctx context.Context) (r *GetSupplyChainOK, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -396,6 +414,15 @@ func (UnimplementedHandler) GetWaypoint(ctx context.Context, params GetWaypointP
 //
 // POST /my/ships/{shipSymbol}/mounts/install
 func (UnimplementedHandler) InstallMount(ctx context.Context, req OptInstallMountReq, params InstallMountParams) (r *InstallMountCreated, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// InstallShipModule implements install-ship-module operation.
+//
+// Install a module on a ship. The module must be in your cargo.
+//
+// POST /my/ships/{shipSymbol}/modules/install
+func (UnimplementedHandler) InstallShipModule(ctx context.Context, req OptInstallShipModuleReq, params InstallShipModuleParams) (r *InstallShipModuleCreated, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -527,16 +554,16 @@ func (UnimplementedHandler) RefuelShip(ctx context.Context, req OptRefuelShipReq
 // This new agent will be tied to a starting faction of your choice, which determines your starting
 // location, and will be granted an authorization token, a contract with their starting faction, a
 // command ship that can fly across space with advanced capabilities, a small probe ship that can be
-// used for reconnaissance, and 150,000 credits.
+// used for reconnaissance, and 175,000 credits.
 // > #### Keep your token safe and secure
 // >
-// > Save your token during the alpha phase. There is no way to regenerate this token without
-// starting a new agent. In the future you will be able to generate and manage your tokens from the
-// SpaceTraders website.
+// > Keep careful track of where you store your token. You can generate a new token from our account
+// dashboard, but if someone else gains access to your token they will be able to use it to make API
+// requests on your behalf until the end of the reset.
 // If you are new to SpaceTraders, It is recommended to register with the COSMIC faction, a faction
 // that is well connected to the rest of the universe. After registering, you should try our
 // interactive [quickstart guide](https://docs.spacetraders.io/quickstart/new-game) which will walk
-// you through basic API requests in just a few minutes.
+// you through a few basic API requests in just a few minutes.
 //
 // POST /register
 func (UnimplementedHandler) Register(ctx context.Context, req OptRegisterReq) (r *RegisterCreated, _ error) {
@@ -552,6 +579,15 @@ func (UnimplementedHandler) Register(ctx context.Context, req OptRegisterReq) (r
 //
 // POST /my/ships/{shipSymbol}/mounts/remove
 func (UnimplementedHandler) RemoveMount(ctx context.Context, req OptRemoveMountReq, params RemoveMountParams) (r *RemoveMountCreated, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RemoveShipModule implements remove-ship-module operation.
+//
+// Remove a module from a ship. The module will be placed in cargo.
+//
+// POST /my/ships/{shipSymbol}/modules/remove
+func (UnimplementedHandler) RemoveShipModule(ctx context.Context, req OptRemoveShipModuleReq, params RemoveShipModuleParams) (r *RemoveShipModuleCreated, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -592,7 +628,7 @@ func (UnimplementedHandler) SellCargo(ctx context.Context, req OptSellCargoReq, 
 // Attempt to refine the raw materials on your ship. The request will only succeed if your ship is
 // capable of refining at the time of the request. In order to be able to refine, a ship must have
 // goods that can be refined and have installed a `Refinery` module that can refine it.
-// When refining, 30 basic goods will be converted into 10 processed goods.
+// When refining, 100 basic goods will be converted into 10 processed goods.
 //
 // POST /my/ships/{shipSymbol}/refine
 func (UnimplementedHandler) ShipRefine(ctx context.Context, req OptShipRefineReq, params ShipRefineParams) (r *ShipRefineCreated, _ error) {
@@ -601,7 +637,7 @@ func (UnimplementedHandler) ShipRefine(ctx context.Context, req OptShipRefineReq
 
 // SiphonResources implements siphon-resources operation.
 //
-// Siphon gases, such as hydrocarbon, from gas giants.
+// Siphon gases or other resources from gas giants.
 // The ship must be in orbit to be able to siphon and must have siphon mounts and a gas processor
 // installed.
 //

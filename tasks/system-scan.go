@@ -125,3 +125,30 @@ func ScanShipyards(client *api.Client, repo *repo.Repo, system string) error {
 
 	return nil
 }
+
+func UpdateSystems(client *api.Client, repo *repo.Repo) error {
+
+	page := 1
+	for {
+		slog.Info(fmt.Sprintf("updating systems: page %d", page), "page", page)
+		res, err := client.GetSystems(context.TODO(), api.GetSystemsParams{Limit: api.NewOptInt(20), Page: api.NewOptInt(page)})
+		if err != nil {
+			return err
+		}
+
+		if len(res.Data) == 0 {
+			break
+		}
+
+		err = repo.UpsertSystems(res.Data)
+		if err != nil {
+			return err
+		}
+
+		time.Sleep(500 * time.Millisecond)
+
+		page++
+	}
+
+	return nil
+}

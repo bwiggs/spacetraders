@@ -2400,6 +2400,72 @@ func decodeGetShipCooldownParams(args [1]string, argsEscaped bool, r *http.Reque
 	return params, nil
 }
 
+// GetShipModulesParams is parameters of get-ship-modules operation.
+type GetShipModulesParams struct {
+	// The symbol of the ship.
+	ShipSymbol string
+}
+
+func unpackGetShipModulesParams(packed middleware.Parameters) (params GetShipModulesParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "shipSymbol",
+			In:   "path",
+		}
+		params.ShipSymbol = packed[key].(string)
+	}
+	return params
+}
+
+func decodeGetShipModulesParams(args [1]string, argsEscaped bool, r *http.Request) (params GetShipModulesParams, _ error) {
+	// Decode path: shipSymbol.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "shipSymbol",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.ShipSymbol = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "shipSymbol",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // GetShipNavParams is parameters of get-ship-nav operation.
 type GetShipNavParams struct {
 	// The ship symbol.
@@ -3314,6 +3380,72 @@ func decodeInstallMountParams(args [1]string, argsEscaped bool, r *http.Request)
 	return params, nil
 }
 
+// InstallShipModuleParams is parameters of install-ship-module operation.
+type InstallShipModuleParams struct {
+	// The symbol of the ship.
+	ShipSymbol string
+}
+
+func unpackInstallShipModuleParams(packed middleware.Parameters) (params InstallShipModuleParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "shipSymbol",
+			In:   "path",
+		}
+		params.ShipSymbol = packed[key].(string)
+	}
+	return params
+}
+
+func decodeInstallShipModuleParams(args [1]string, argsEscaped bool, r *http.Request) (params InstallShipModuleParams, _ error) {
+	// Decode path: shipSymbol.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "shipSymbol",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.ShipSymbol = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "shipSymbol",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // JettisonParams is parameters of jettison operation.
 type JettisonParams struct {
 	// The ship symbol.
@@ -3860,6 +3992,72 @@ func unpackRemoveMountParams(packed middleware.Parameters) (params RemoveMountPa
 }
 
 func decodeRemoveMountParams(args [1]string, argsEscaped bool, r *http.Request) (params RemoveMountParams, _ error) {
+	// Decode path: shipSymbol.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "shipSymbol",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.ShipSymbol = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "shipSymbol",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// RemoveShipModuleParams is parameters of remove-ship-module operation.
+type RemoveShipModuleParams struct {
+	// The symbol of the ship.
+	ShipSymbol string
+}
+
+func unpackRemoveShipModuleParams(packed middleware.Parameters) (params RemoveShipModuleParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "shipSymbol",
+			In:   "path",
+		}
+		params.ShipSymbol = packed[key].(string)
+	}
+	return params
+}
+
+func decodeRemoveShipModuleParams(args [1]string, argsEscaped bool, r *http.Request) (params RemoveShipModuleParams, _ error) {
 	// Decode path: shipSymbol.
 	if err := func() error {
 		param := args[0]

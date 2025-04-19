@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ogen-go/ogen/conv"
@@ -21,6 +21,11 @@ import (
 	"github.com/ogen-go/ogen/otelogen"
 	"github.com/ogen-go/ogen/uri"
 )
+
+func trimTrailingSlashes(u *url.URL) {
+	u.Path = strings.TrimRight(u.Path, "/")
+	u.RawPath = strings.TrimRight(u.RawPath, "/")
+}
 
 // Invoker invokes operations described by OpenAPI v3 specification.
 type Invoker interface {
@@ -245,6 +250,12 @@ type Invoker interface {
 	//
 	// GET /my/ships/{shipSymbol}/cooldown
 	GetShipCooldown(ctx context.Context, params GetShipCooldownParams) (GetShipCooldownRes, error)
+	// GetShipModules invokes get-ship-modules operation.
+	//
+	// Get the modules installed on a ship.
+	//
+	// GET /my/ships/{shipSymbol}/modules
+	GetShipModules(ctx context.Context, params GetShipModulesParams) (*GetShipModulesOK, error)
 	// GetShipNav invokes get-ship-nav operation.
 	//
 	// Get the current nav status of a ship.
@@ -267,6 +278,12 @@ type Invoker interface {
 	//
 	// GET /
 	GetStatus(ctx context.Context) (*GetStatusOK, error)
+	// GetSupplyChain invokes get-supply-chain operation.
+	//
+	// Describes which import and exports map to each other.
+	//
+	// GET /market/supply-chain
+	GetSupplyChain(ctx context.Context) (*GetSupplyChainOK, error)
 	// GetSystem invokes get-system operation.
 	//
 	// Get the details of a system.
@@ -302,6 +319,12 @@ type Invoker interface {
 	//
 	// POST /my/ships/{shipSymbol}/mounts/install
 	InstallMount(ctx context.Context, request OptInstallMountReq, params InstallMountParams) (*InstallMountCreated, error)
+	// InstallShipModule invokes install-ship-module operation.
+	//
+	// Install a module on a ship. The module must be in your cargo.
+	//
+	// POST /my/ships/{shipSymbol}/modules/install
+	InstallShipModule(ctx context.Context, request OptInstallShipModuleReq, params InstallShipModuleParams) (*InstallShipModuleCreated, error)
 	// Jettison invokes jettison operation.
 	//
 	// Jettison cargo from your ship's cargo hold.
@@ -401,16 +424,16 @@ type Invoker interface {
 	// This new agent will be tied to a starting faction of your choice, which determines your starting
 	// location, and will be granted an authorization token, a contract with their starting faction, a
 	// command ship that can fly across space with advanced capabilities, a small probe ship that can be
-	// used for reconnaissance, and 150,000 credits.
+	// used for reconnaissance, and 175,000 credits.
 	// > #### Keep your token safe and secure
 	// >
-	// > Save your token during the alpha phase. There is no way to regenerate this token without
-	// starting a new agent. In the future you will be able to generate and manage your tokens from the
-	// SpaceTraders website.
+	// > Keep careful track of where you store your token. You can generate a new token from our account
+	// dashboard, but if someone else gains access to your token they will be able to use it to make API
+	// requests on your behalf until the end of the reset.
 	// If you are new to SpaceTraders, It is recommended to register with the COSMIC faction, a faction
 	// that is well connected to the rest of the universe. After registering, you should try our
 	// interactive [quickstart guide](https://docs.spacetraders.io/quickstart/new-game) which will walk
-	// you through basic API requests in just a few minutes.
+	// you through a few basic API requests in just a few minutes.
 	//
 	// POST /register
 	Register(ctx context.Context, request OptRegisterReq) (*RegisterCreated, error)
@@ -423,6 +446,12 @@ type Invoker interface {
 	//
 	// POST /my/ships/{shipSymbol}/mounts/remove
 	RemoveMount(ctx context.Context, request OptRemoveMountReq, params RemoveMountParams) (*RemoveMountCreated, error)
+	// RemoveShipModule invokes remove-ship-module operation.
+	//
+	// Remove a module from a ship. The module will be placed in cargo.
+	//
+	// POST /my/ships/{shipSymbol}/modules/remove
+	RemoveShipModule(ctx context.Context, request OptRemoveShipModuleReq, params RemoveShipModuleParams) (*RemoveShipModuleCreated, error)
 	// RepairShip invokes repair-ship operation.
 	//
 	// Repair a ship, restoring the ship to maximum condition. The ship must be docked at a waypoint that
@@ -451,13 +480,13 @@ type Invoker interface {
 	// Attempt to refine the raw materials on your ship. The request will only succeed if your ship is
 	// capable of refining at the time of the request. In order to be able to refine, a ship must have
 	// goods that can be refined and have installed a `Refinery` module that can refine it.
-	// When refining, 30 basic goods will be converted into 10 processed goods.
+	// When refining, 100 basic goods will be converted into 10 processed goods.
 	//
 	// POST /my/ships/{shipSymbol}/refine
 	ShipRefine(ctx context.Context, request OptShipRefineReq, params ShipRefineParams) (*ShipRefineCreated, error)
 	// SiphonResources invokes siphon-resources operation.
 	//
-	// Siphon gases, such as hydrocarbon, from gas giants.
+	// Siphon gases or other resources from gas giants.
 	// The ship must be in orbit to be able to siphon and must have siphon mounts and a gas processor
 	// installed.
 	//
@@ -504,11 +533,6 @@ type Client struct {
 var _ Handler = struct {
 	*Client
 }{}
-
-func trimTrailingSlashes(u *url.URL) {
-	u.Path = strings.TrimRight(u.Path, "/")
-	u.RawPath = strings.TrimRight(u.RawPath, "/")
-}
 
 // NewClient initializes new Client defined by OAS.
 func NewClient(serverURL string, sec SecuritySource, opts ...ClientOption) (*Client, error) {
@@ -559,7 +583,7 @@ func (c *Client) AcceptContract(ctx context.Context, params AcceptContractParams
 func (c *Client) sendAcceptContract(ctx context.Context, params AcceptContractParams) (res *AcceptContractOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("accept-contract"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/contracts/{contractId}/accept"),
 	}
 
@@ -568,14 +592,14 @@ func (c *Client) sendAcceptContract(ctx context.Context, params AcceptContractPa
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "AcceptContract",
+	ctx, span := c.cfg.Tracer.Start(ctx, AcceptContractOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -626,7 +650,7 @@ func (c *Client) sendAcceptContract(ctx context.Context, params AcceptContractPa
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "AcceptContract", r); {
+			switch err := c.securityAgentToken(ctx, AcceptContractOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -687,7 +711,7 @@ func (c *Client) CreateChart(ctx context.Context, params CreateChartParams) (*Cr
 func (c *Client) sendCreateChart(ctx context.Context, params CreateChartParams) (res *CreateChartCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("create-chart"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/chart"),
 	}
 
@@ -696,14 +720,14 @@ func (c *Client) sendCreateChart(ctx context.Context, params CreateChartParams) 
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "CreateChart",
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateChartOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -754,7 +778,7 @@ func (c *Client) sendCreateChart(ctx context.Context, params CreateChartParams) 
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "CreateChart", r); {
+			switch err := c.securityAgentToken(ctx, CreateChartOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -814,7 +838,7 @@ func (c *Client) CreateShipShipScan(ctx context.Context, params CreateShipShipSc
 func (c *Client) sendCreateShipShipScan(ctx context.Context, params CreateShipShipScanParams) (res *CreateShipShipScanCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("create-ship-ship-scan"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/scan/ships"),
 	}
 
@@ -823,14 +847,14 @@ func (c *Client) sendCreateShipShipScan(ctx context.Context, params CreateShipSh
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "CreateShipShipScan",
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateShipShipScanOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -881,7 +905,7 @@ func (c *Client) sendCreateShipShipScan(ctx context.Context, params CreateShipSh
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "CreateShipShipScan", r); {
+			switch err := c.securityAgentToken(ctx, CreateShipShipScanOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -941,7 +965,7 @@ func (c *Client) CreateShipSystemScan(ctx context.Context, params CreateShipSyst
 func (c *Client) sendCreateShipSystemScan(ctx context.Context, params CreateShipSystemScanParams) (res *CreateShipSystemScanCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("create-ship-system-scan"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/scan/systems"),
 	}
 
@@ -950,14 +974,14 @@ func (c *Client) sendCreateShipSystemScan(ctx context.Context, params CreateShip
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "CreateShipSystemScan",
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateShipSystemScanOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1008,7 +1032,7 @@ func (c *Client) sendCreateShipSystemScan(ctx context.Context, params CreateShip
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "CreateShipSystemScan", r); {
+			switch err := c.securityAgentToken(ctx, CreateShipSystemScanOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1070,7 +1094,7 @@ func (c *Client) CreateShipWaypointScan(ctx context.Context, params CreateShipWa
 func (c *Client) sendCreateShipWaypointScan(ctx context.Context, params CreateShipWaypointScanParams) (res *CreateShipWaypointScanCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("create-ship-waypoint-scan"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/scan/waypoints"),
 	}
 
@@ -1079,14 +1103,14 @@ func (c *Client) sendCreateShipWaypointScan(ctx context.Context, params CreateSh
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "CreateShipWaypointScan",
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateShipWaypointScanOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1137,7 +1161,7 @@ func (c *Client) sendCreateShipWaypointScan(ctx context.Context, params CreateSh
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "CreateShipWaypointScan", r); {
+			switch err := c.securityAgentToken(ctx, CreateShipWaypointScanOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1203,7 +1227,7 @@ func (c *Client) CreateSurvey(ctx context.Context, params CreateSurveyParams) (*
 func (c *Client) sendCreateSurvey(ctx context.Context, params CreateSurveyParams) (res *CreateSurveyCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("create-survey"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/survey"),
 	}
 
@@ -1212,14 +1236,14 @@ func (c *Client) sendCreateSurvey(ctx context.Context, params CreateSurveyParams
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "CreateSurvey",
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateSurveyOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1270,7 +1294,7 @@ func (c *Client) sendCreateSurvey(ctx context.Context, params CreateSurveyParams
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "CreateSurvey", r); {
+			switch err := c.securityAgentToken(ctx, CreateSurveyOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1331,7 +1355,7 @@ func (c *Client) DeliverContract(ctx context.Context, request OptDeliverContract
 func (c *Client) sendDeliverContract(ctx context.Context, request OptDeliverContractReq, params DeliverContractParams) (res *DeliverContractOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("deliver-contract"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/contracts/{contractId}/deliver"),
 	}
 
@@ -1340,14 +1364,14 @@ func (c *Client) sendDeliverContract(ctx context.Context, request OptDeliverCont
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "DeliverContract",
+	ctx, span := c.cfg.Tracer.Start(ctx, DeliverContractOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1401,7 +1425,7 @@ func (c *Client) sendDeliverContract(ctx context.Context, request OptDeliverCont
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "DeliverContract", r); {
+			switch err := c.securityAgentToken(ctx, DeliverContractOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1462,7 +1486,7 @@ func (c *Client) DockShip(ctx context.Context, params DockShipParams) (*DockShip
 func (c *Client) sendDockShip(ctx context.Context, params DockShipParams) (res *DockShipOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("dock-ship"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/dock"),
 	}
 
@@ -1471,14 +1495,14 @@ func (c *Client) sendDockShip(ctx context.Context, params DockShipParams) (res *
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "DockShip",
+	ctx, span := c.cfg.Tracer.Start(ctx, DockShipOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1529,7 +1553,7 @@ func (c *Client) sendDockShip(ctx context.Context, params DockShipParams) (res *
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "DockShip", r); {
+			switch err := c.securityAgentToken(ctx, DockShipOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1591,7 +1615,7 @@ func (c *Client) ExtractResources(ctx context.Context, request OptExtractResourc
 func (c *Client) sendExtractResources(ctx context.Context, request OptExtractResourcesReq, params ExtractResourcesParams) (res *ExtractResourcesCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("extract-resources"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/extract"),
 	}
 
@@ -1600,14 +1624,14 @@ func (c *Client) sendExtractResources(ctx context.Context, request OptExtractRes
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "ExtractResources",
+	ctx, span := c.cfg.Tracer.Start(ctx, ExtractResourcesOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1661,7 +1685,7 @@ func (c *Client) sendExtractResources(ctx context.Context, request OptExtractRes
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "ExtractResources", r); {
+			switch err := c.securityAgentToken(ctx, ExtractResourcesOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1721,7 +1745,7 @@ func (c *Client) ExtractResourcesWithSurvey(ctx context.Context, request OptSurv
 func (c *Client) sendExtractResourcesWithSurvey(ctx context.Context, request OptSurvey, params ExtractResourcesWithSurveyParams) (res *ExtractResourcesWithSurveyCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("extract-resources-with-survey"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/extract/survey"),
 	}
 
@@ -1730,14 +1754,14 @@ func (c *Client) sendExtractResourcesWithSurvey(ctx context.Context, request Opt
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "ExtractResourcesWithSurvey",
+	ctx, span := c.cfg.Tracer.Start(ctx, ExtractResourcesWithSurveyOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1791,7 +1815,7 @@ func (c *Client) sendExtractResourcesWithSurvey(ctx context.Context, request Opt
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "ExtractResourcesWithSurvey", r); {
+			switch err := c.securityAgentToken(ctx, ExtractResourcesWithSurveyOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1848,7 +1872,7 @@ func (c *Client) FulfillContract(ctx context.Context, params FulfillContractPara
 func (c *Client) sendFulfillContract(ctx context.Context, params FulfillContractParams) (res *FulfillContractOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("fulfill-contract"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/contracts/{contractId}/fulfill"),
 	}
 
@@ -1857,14 +1881,14 @@ func (c *Client) sendFulfillContract(ctx context.Context, params FulfillContract
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "FulfillContract",
+	ctx, span := c.cfg.Tracer.Start(ctx, FulfillContractOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1915,7 +1939,7 @@ func (c *Client) sendFulfillContract(ctx context.Context, params FulfillContract
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "FulfillContract", r); {
+			switch err := c.securityAgentToken(ctx, FulfillContractOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1972,7 +1996,7 @@ func (c *Client) GetAgent(ctx context.Context, params GetAgentParams) (*GetAgent
 func (c *Client) sendGetAgent(ctx context.Context, params GetAgentParams) (res *GetAgentOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-agent"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/agents/{agentSymbol}"),
 	}
 
@@ -1981,14 +2005,14 @@ func (c *Client) sendGetAgent(ctx context.Context, params GetAgentParams) (res *
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetAgent",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetAgentOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2038,7 +2062,7 @@ func (c *Client) sendGetAgent(ctx context.Context, params GetAgentParams) (res *
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetAgent", r); {
+			switch err := c.securityAgentToken(ctx, GetAgentOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2096,7 +2120,7 @@ func (c *Client) GetAgents(ctx context.Context, params GetAgentsParams) (*GetAge
 func (c *Client) sendGetAgents(ctx context.Context, params GetAgentsParams) (res *GetAgentsOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-agents"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/agents"),
 	}
 
@@ -2105,14 +2129,14 @@ func (c *Client) sendGetAgents(ctx context.Context, params GetAgentsParams) (res
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetAgents",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetAgentsOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2182,7 +2206,7 @@ func (c *Client) sendGetAgents(ctx context.Context, params GetAgentsParams) (res
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetAgents", r); {
+			switch err := c.securityAgentToken(ctx, GetAgentsOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2241,7 +2265,7 @@ func (c *Client) GetConstruction(ctx context.Context, params GetConstructionPara
 func (c *Client) sendGetConstruction(ctx context.Context, params GetConstructionParams) (res *GetConstructionOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-construction"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/systems/{systemSymbol}/waypoints/{waypointSymbol}/construction"),
 	}
 
@@ -2250,14 +2274,14 @@ func (c *Client) sendGetConstruction(ctx context.Context, params GetConstruction
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetConstruction",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetConstructionOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2327,7 +2351,7 @@ func (c *Client) sendGetConstruction(ctx context.Context, params GetConstruction
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetConstruction", r); {
+			switch err := c.securityAgentToken(ctx, GetConstructionOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2385,7 +2409,7 @@ func (c *Client) GetContract(ctx context.Context, params GetContractParams) (*Ge
 func (c *Client) sendGetContract(ctx context.Context, params GetContractParams) (res *GetContractOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-contract"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/my/contracts/{contractId}"),
 	}
 
@@ -2394,14 +2418,14 @@ func (c *Client) sendGetContract(ctx context.Context, params GetContractParams) 
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetContract",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetContractOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2451,7 +2475,7 @@ func (c *Client) sendGetContract(ctx context.Context, params GetContractParams) 
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetContract", r); {
+			switch err := c.securityAgentToken(ctx, GetContractOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2508,7 +2532,7 @@ func (c *Client) GetContracts(ctx context.Context, params GetContractsParams) (*
 func (c *Client) sendGetContracts(ctx context.Context, params GetContractsParams) (res *GetContractsOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-contracts"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/my/contracts"),
 	}
 
@@ -2517,14 +2541,14 @@ func (c *Client) sendGetContracts(ctx context.Context, params GetContractsParams
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetContracts",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetContractsOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2594,7 +2618,7 @@ func (c *Client) sendGetContracts(ctx context.Context, params GetContractsParams
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetContracts", r); {
+			switch err := c.securityAgentToken(ctx, GetContractsOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2651,7 +2675,7 @@ func (c *Client) GetFaction(ctx context.Context, params GetFactionParams) (*GetF
 func (c *Client) sendGetFaction(ctx context.Context, params GetFactionParams) (res *GetFactionOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-faction"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/factions/{factionSymbol}"),
 	}
 
@@ -2660,14 +2684,14 @@ func (c *Client) sendGetFaction(ctx context.Context, params GetFactionParams) (r
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetFaction",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetFactionOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2716,10 +2740,21 @@ func (c *Client) sendGetFaction(ctx context.Context, params GetFactionParams) (r
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetFaction", r); {
+			stage = "Security:AccountToken"
+			switch err := c.securityAccountToken(ctx, GetFactionOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AccountToken\"")
+			}
+		}
+		{
+			stage = "Security:AgentToken"
+			switch err := c.securityAgentToken(ctx, GetFactionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
 				// Skip this security.
 			default:
@@ -2730,7 +2765,7 @@ func (c *Client) sendGetFaction(ctx context.Context, params GetFactionParams) (r
 		if ok := func() bool {
 		nextRequirement:
 			for _, requirement := range []bitset{
-				{0b00000001},
+				{0b00000011},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -2774,7 +2809,7 @@ func (c *Client) GetFactions(ctx context.Context, params GetFactionsParams) (*Ge
 func (c *Client) sendGetFactions(ctx context.Context, params GetFactionsParams) (res *GetFactionsOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-factions"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/factions"),
 	}
 
@@ -2783,14 +2818,14 @@ func (c *Client) sendGetFactions(ctx context.Context, params GetFactionsParams) 
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetFactions",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetFactionsOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2860,7 +2895,7 @@ func (c *Client) sendGetFactions(ctx context.Context, params GetFactionsParams) 
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetFactions", r); {
+			switch err := c.securityAgentToken(ctx, GetFactionsOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2919,7 +2954,7 @@ func (c *Client) GetJumpGate(ctx context.Context, params GetJumpGateParams) (*Ge
 func (c *Client) sendGetJumpGate(ctx context.Context, params GetJumpGateParams) (res *GetJumpGateOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-jump-gate"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/systems/{systemSymbol}/waypoints/{waypointSymbol}/jump-gate"),
 	}
 
@@ -2928,14 +2963,14 @@ func (c *Client) sendGetJumpGate(ctx context.Context, params GetJumpGateParams) 
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetJumpGate",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetJumpGateOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3005,7 +3040,7 @@ func (c *Client) sendGetJumpGate(ctx context.Context, params GetJumpGateParams) 
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetJumpGate", r); {
+			switch err := c.securityAgentToken(ctx, GetJumpGateOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3067,7 +3102,7 @@ func (c *Client) GetMarket(ctx context.Context, params GetMarketParams) (*GetMar
 func (c *Client) sendGetMarket(ctx context.Context, params GetMarketParams) (res *GetMarketOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-market"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/systems/{systemSymbol}/waypoints/{waypointSymbol}/market"),
 	}
 
@@ -3076,14 +3111,14 @@ func (c *Client) sendGetMarket(ctx context.Context, params GetMarketParams) (res
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetMarket",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetMarketOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3153,7 +3188,7 @@ func (c *Client) sendGetMarket(ctx context.Context, params GetMarketParams) (res
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetMarket", r); {
+			switch err := c.securityAgentToken(ctx, GetMarketOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3211,7 +3246,7 @@ func (c *Client) GetMounts(ctx context.Context, params GetMountsParams) (*GetMou
 func (c *Client) sendGetMounts(ctx context.Context, params GetMountsParams) (res *GetMountsOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-mounts"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/mounts"),
 	}
 
@@ -3220,14 +3255,14 @@ func (c *Client) sendGetMounts(ctx context.Context, params GetMountsParams) (res
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetMounts",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetMountsOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3278,7 +3313,7 @@ func (c *Client) sendGetMounts(ctx context.Context, params GetMountsParams) (res
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetMounts", r); {
+			switch err := c.securityAgentToken(ctx, GetMountsOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3335,7 +3370,7 @@ func (c *Client) GetMyAgent(ctx context.Context) (*GetMyAgentOK, error) {
 func (c *Client) sendGetMyAgent(ctx context.Context) (res *GetMyAgentOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-my-agent"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/my/agent"),
 	}
 
@@ -3344,14 +3379,14 @@ func (c *Client) sendGetMyAgent(ctx context.Context) (res *GetMyAgentOK, err err
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetMyAgent",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetMyAgentOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3383,7 +3418,7 @@ func (c *Client) sendGetMyAgent(ctx context.Context) (res *GetMyAgentOK, err err
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetMyAgent", r); {
+			switch err := c.securityAgentToken(ctx, GetMyAgentOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3440,7 +3475,7 @@ func (c *Client) GetMyShip(ctx context.Context, params GetMyShipParams) (*GetMyS
 func (c *Client) sendGetMyShip(ctx context.Context, params GetMyShipParams) (res *GetMyShipOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-my-ship"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}"),
 	}
 
@@ -3449,14 +3484,14 @@ func (c *Client) sendGetMyShip(ctx context.Context, params GetMyShipParams) (res
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetMyShip",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetMyShipOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3506,7 +3541,7 @@ func (c *Client) sendGetMyShip(ctx context.Context, params GetMyShipParams) (res
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetMyShip", r); {
+			switch err := c.securityAgentToken(ctx, GetMyShipOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3563,7 +3598,7 @@ func (c *Client) GetMyShipCargo(ctx context.Context, params GetMyShipCargoParams
 func (c *Client) sendGetMyShipCargo(ctx context.Context, params GetMyShipCargoParams) (res *GetMyShipCargoOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-my-ship-cargo"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/cargo"),
 	}
 
@@ -3572,14 +3607,14 @@ func (c *Client) sendGetMyShipCargo(ctx context.Context, params GetMyShipCargoPa
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetMyShipCargo",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetMyShipCargoOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3630,7 +3665,7 @@ func (c *Client) sendGetMyShipCargo(ctx context.Context, params GetMyShipCargoPa
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetMyShipCargo", r); {
+			switch err := c.securityAgentToken(ctx, GetMyShipCargoOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3687,7 +3722,7 @@ func (c *Client) GetMyShips(ctx context.Context, params GetMyShipsParams) (*GetM
 func (c *Client) sendGetMyShips(ctx context.Context, params GetMyShipsParams) (res *GetMyShipsOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-my-ships"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/my/ships"),
 	}
 
@@ -3696,14 +3731,14 @@ func (c *Client) sendGetMyShips(ctx context.Context, params GetMyShipsParams) (r
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetMyShips",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetMyShipsOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3773,7 +3808,7 @@ func (c *Client) sendGetMyShips(ctx context.Context, params GetMyShipsParams) (r
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetMyShips", r); {
+			switch err := c.securityAgentToken(ctx, GetMyShipsOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3830,7 +3865,7 @@ func (c *Client) GetRepairShip(ctx context.Context, params GetRepairShipParams) 
 func (c *Client) sendGetRepairShip(ctx context.Context, params GetRepairShipParams) (res *GetRepairShipOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-repair-ship"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/repair"),
 	}
 
@@ -3839,14 +3874,14 @@ func (c *Client) sendGetRepairShip(ctx context.Context, params GetRepairShipPara
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetRepairShip",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetRepairShipOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3897,7 +3932,7 @@ func (c *Client) sendGetRepairShip(ctx context.Context, params GetRepairShipPara
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetRepairShip", r); {
+			switch err := c.securityAgentToken(ctx, GetRepairShipOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3954,7 +3989,7 @@ func (c *Client) GetScrapShip(ctx context.Context, params GetScrapShipParams) (*
 func (c *Client) sendGetScrapShip(ctx context.Context, params GetScrapShipParams) (res *GetScrapShipOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-scrap-ship"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/scrap"),
 	}
 
@@ -3963,14 +3998,14 @@ func (c *Client) sendGetScrapShip(ctx context.Context, params GetScrapShipParams
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetScrapShip",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetScrapShipOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -4021,7 +4056,7 @@ func (c *Client) sendGetScrapShip(ctx context.Context, params GetScrapShipParams
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetScrapShip", r); {
+			switch err := c.securityAgentToken(ctx, GetScrapShipOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -4083,7 +4118,7 @@ func (c *Client) GetShipCooldown(ctx context.Context, params GetShipCooldownPara
 func (c *Client) sendGetShipCooldown(ctx context.Context, params GetShipCooldownParams) (res GetShipCooldownRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-ship-cooldown"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/cooldown"),
 	}
 
@@ -4092,14 +4127,14 @@ func (c *Client) sendGetShipCooldown(ctx context.Context, params GetShipCooldown
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetShipCooldown",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetShipCooldownOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -4150,7 +4185,7 @@ func (c *Client) sendGetShipCooldown(ctx context.Context, params GetShipCooldown
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetShipCooldown", r); {
+			switch err := c.securityAgentToken(ctx, GetShipCooldownOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -4194,6 +4229,141 @@ func (c *Client) sendGetShipCooldown(ctx context.Context, params GetShipCooldown
 	return result, nil
 }
 
+// GetShipModules invokes get-ship-modules operation.
+//
+// Get the modules installed on a ship.
+//
+// GET /my/ships/{shipSymbol}/modules
+func (c *Client) GetShipModules(ctx context.Context, params GetShipModulesParams) (*GetShipModulesOK, error) {
+	res, err := c.sendGetShipModules(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetShipModules(ctx context.Context, params GetShipModulesParams) (res *GetShipModulesOK, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("get-ship-modules"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/modules"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetShipModulesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/my/ships/"
+	{
+		// Encode "shipSymbol" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "shipSymbol",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ShipSymbol))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/modules"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:AccountToken"
+			switch err := c.securityAccountToken(ctx, GetShipModulesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AccountToken\"")
+			}
+		}
+		{
+			stage = "Security:AgentToken"
+			switch err := c.securityAgentToken(ctx, GetShipModulesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AgentToken\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000011},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetShipModulesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetShipNav invokes get-ship-nav operation.
 //
 // Get the current nav status of a ship.
@@ -4207,7 +4377,7 @@ func (c *Client) GetShipNav(ctx context.Context, params GetShipNavParams) (*GetS
 func (c *Client) sendGetShipNav(ctx context.Context, params GetShipNavParams) (res *GetShipNavOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-ship-nav"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/nav"),
 	}
 
@@ -4216,14 +4386,14 @@ func (c *Client) sendGetShipNav(ctx context.Context, params GetShipNavParams) (r
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetShipNav",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetShipNavOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -4274,7 +4444,7 @@ func (c *Client) sendGetShipNav(ctx context.Context, params GetShipNavParams) (r
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetShipNav", r); {
+			switch err := c.securityAgentToken(ctx, GetShipNavOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -4333,7 +4503,7 @@ func (c *Client) GetShipyard(ctx context.Context, params GetShipyardParams) (*Ge
 func (c *Client) sendGetShipyard(ctx context.Context, params GetShipyardParams) (res *GetShipyardOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-shipyard"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/systems/{systemSymbol}/waypoints/{waypointSymbol}/shipyard"),
 	}
 
@@ -4342,14 +4512,14 @@ func (c *Client) sendGetShipyard(ctx context.Context, params GetShipyardParams) 
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetShipyard",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetShipyardOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -4419,7 +4589,7 @@ func (c *Client) sendGetShipyard(ctx context.Context, params GetShipyardParams) 
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetShipyard", r); {
+			switch err := c.securityAgentToken(ctx, GetShipyardOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -4479,7 +4649,7 @@ func (c *Client) GetStatus(ctx context.Context) (*GetStatusOK, error) {
 func (c *Client) sendGetStatus(ctx context.Context) (res *GetStatusOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-status"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/"),
 	}
 
@@ -4488,14 +4658,14 @@ func (c *Client) sendGetStatus(ctx context.Context) (res *GetStatusOK, err error
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetStatus",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetStatusOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -4527,7 +4697,7 @@ func (c *Client) sendGetStatus(ctx context.Context) (res *GetStatusOK, err error
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetStatus", r); {
+			switch err := c.securityAgentToken(ctx, GetStatusOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -4572,6 +4742,111 @@ func (c *Client) sendGetStatus(ctx context.Context) (res *GetStatusOK, err error
 	return result, nil
 }
 
+// GetSupplyChain invokes get-supply-chain operation.
+//
+// Describes which import and exports map to each other.
+//
+// GET /market/supply-chain
+func (c *Client) GetSupplyChain(ctx context.Context) (*GetSupplyChainOK, error) {
+	res, err := c.sendGetSupplyChain(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetSupplyChain(ctx context.Context) (res *GetSupplyChainOK, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("get-supply-chain"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/market/supply-chain"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetSupplyChainOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/market/supply-chain"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:AgentToken"
+			switch err := c.securityAgentToken(ctx, GetSupplyChainOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AgentToken\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetSupplyChainResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetSystem invokes get-system operation.
 //
 // Get the details of a system.
@@ -4585,7 +4860,7 @@ func (c *Client) GetSystem(ctx context.Context, params GetSystemParams) (*GetSys
 func (c *Client) sendGetSystem(ctx context.Context, params GetSystemParams) (res *GetSystemOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-system"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/systems/{systemSymbol}"),
 	}
 
@@ -4594,14 +4869,14 @@ func (c *Client) sendGetSystem(ctx context.Context, params GetSystemParams) (res
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetSystem",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetSystemOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -4651,7 +4926,7 @@ func (c *Client) sendGetSystem(ctx context.Context, params GetSystemParams) (res
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetSystem", r); {
+			switch err := c.securityAgentToken(ctx, GetSystemOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -4710,7 +4985,7 @@ func (c *Client) GetSystemWaypoints(ctx context.Context, params GetSystemWaypoin
 func (c *Client) sendGetSystemWaypoints(ctx context.Context, params GetSystemWaypointsParams) (res *GetSystemWaypointsOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-system-waypoints"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/systems/{systemSymbol}/waypoints"),
 	}
 
@@ -4719,14 +4994,14 @@ func (c *Client) sendGetSystemWaypoints(ctx context.Context, params GetSystemWay
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetSystemWaypoints",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetSystemWaypointsOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -4832,7 +5107,7 @@ func (c *Client) sendGetSystemWaypoints(ctx context.Context, params GetSystemWay
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetSystemWaypoints", r); {
+			switch err := c.securityAgentToken(ctx, GetSystemWaypointsOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -4890,7 +5165,7 @@ func (c *Client) GetSystems(ctx context.Context, params GetSystemsParams) (*GetS
 func (c *Client) sendGetSystems(ctx context.Context, params GetSystemsParams) (res *GetSystemsOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-systems"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/systems"),
 	}
 
@@ -4899,14 +5174,14 @@ func (c *Client) sendGetSystems(ctx context.Context, params GetSystemsParams) (r
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetSystems",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetSystemsOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -4976,7 +5251,7 @@ func (c *Client) sendGetSystems(ctx context.Context, params GetSystemsParams) (r
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetSystems", r); {
+			switch err := c.securityAgentToken(ctx, GetSystemsOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -5035,7 +5310,7 @@ func (c *Client) GetWaypoint(ctx context.Context, params GetWaypointParams) (*Ge
 func (c *Client) sendGetWaypoint(ctx context.Context, params GetWaypointParams) (res *GetWaypointOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("get-waypoint"),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/systems/{systemSymbol}/waypoints/{waypointSymbol}"),
 	}
 
@@ -5044,14 +5319,14 @@ func (c *Client) sendGetWaypoint(ctx context.Context, params GetWaypointParams) 
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "GetWaypoint",
+	ctx, span := c.cfg.Tracer.Start(ctx, GetWaypointOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -5120,7 +5395,7 @@ func (c *Client) sendGetWaypoint(ctx context.Context, params GetWaypointParams) 
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "GetWaypoint", r); {
+			switch err := c.securityAgentToken(ctx, GetWaypointOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -5181,7 +5456,7 @@ func (c *Client) InstallMount(ctx context.Context, request OptInstallMountReq, p
 func (c *Client) sendInstallMount(ctx context.Context, request OptInstallMountReq, params InstallMountParams) (res *InstallMountCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("install-mount"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/mounts/install"),
 	}
 
@@ -5190,14 +5465,14 @@ func (c *Client) sendInstallMount(ctx context.Context, request OptInstallMountRe
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "InstallMount",
+	ctx, span := c.cfg.Tracer.Start(ctx, InstallMountOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -5251,7 +5526,7 @@ func (c *Client) sendInstallMount(ctx context.Context, request OptInstallMountRe
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "InstallMount", r); {
+			switch err := c.securityAgentToken(ctx, InstallMountOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -5295,6 +5570,144 @@ func (c *Client) sendInstallMount(ctx context.Context, request OptInstallMountRe
 	return result, nil
 }
 
+// InstallShipModule invokes install-ship-module operation.
+//
+// Install a module on a ship. The module must be in your cargo.
+//
+// POST /my/ships/{shipSymbol}/modules/install
+func (c *Client) InstallShipModule(ctx context.Context, request OptInstallShipModuleReq, params InstallShipModuleParams) (*InstallShipModuleCreated, error) {
+	res, err := c.sendInstallShipModule(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendInstallShipModule(ctx context.Context, request OptInstallShipModuleReq, params InstallShipModuleParams) (res *InstallShipModuleCreated, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("install-ship-module"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/modules/install"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, InstallShipModuleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/my/ships/"
+	{
+		// Encode "shipSymbol" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "shipSymbol",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ShipSymbol))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/modules/install"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeInstallShipModuleRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:AccountToken"
+			switch err := c.securityAccountToken(ctx, InstallShipModuleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AccountToken\"")
+			}
+		}
+		{
+			stage = "Security:AgentToken"
+			switch err := c.securityAgentToken(ctx, InstallShipModuleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AgentToken\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000011},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeInstallShipModuleResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // Jettison invokes jettison operation.
 //
 // Jettison cargo from your ship's cargo hold.
@@ -5308,7 +5721,7 @@ func (c *Client) Jettison(ctx context.Context, request OptJettisonReq, params Je
 func (c *Client) sendJettison(ctx context.Context, request OptJettisonReq, params JettisonParams) (res *JettisonOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("jettison"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/jettison"),
 	}
 
@@ -5317,14 +5730,14 @@ func (c *Client) sendJettison(ctx context.Context, request OptJettisonReq, param
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "Jettison",
+	ctx, span := c.cfg.Tracer.Start(ctx, JettisonOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -5378,7 +5791,7 @@ func (c *Client) sendJettison(ctx context.Context, request OptJettisonReq, param
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "Jettison", r); {
+			switch err := c.securityAgentToken(ctx, JettisonOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -5439,7 +5852,7 @@ func (c *Client) JumpShip(ctx context.Context, request OptJumpShipReq, params Ju
 func (c *Client) sendJumpShip(ctx context.Context, request OptJumpShipReq, params JumpShipParams) (res *JumpShipOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("jump-ship"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/jump"),
 	}
 
@@ -5448,14 +5861,14 @@ func (c *Client) sendJumpShip(ctx context.Context, request OptJumpShipReq, param
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "JumpShip",
+	ctx, span := c.cfg.Tracer.Start(ctx, JumpShipOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -5509,7 +5922,7 @@ func (c *Client) sendJumpShip(ctx context.Context, request OptJumpShipReq, param
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "JumpShip", r); {
+			switch err := c.securityAgentToken(ctx, JumpShipOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -5571,7 +5984,7 @@ func (c *Client) NavigateShip(ctx context.Context, request OptNavigateShipReq, p
 func (c *Client) sendNavigateShip(ctx context.Context, request OptNavigateShipReq, params NavigateShipParams) (res *NavigateShipOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("navigate-ship"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/navigate"),
 	}
 
@@ -5580,14 +5993,14 @@ func (c *Client) sendNavigateShip(ctx context.Context, request OptNavigateShipRe
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "NavigateShip",
+	ctx, span := c.cfg.Tracer.Start(ctx, NavigateShipOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -5641,7 +6054,7 @@ func (c *Client) sendNavigateShip(ctx context.Context, request OptNavigateShipRe
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "NavigateShip", r); {
+			switch err := c.securityAgentToken(ctx, NavigateShipOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -5704,7 +6117,7 @@ func (c *Client) NegotiateContract(ctx context.Context, params NegotiateContract
 func (c *Client) sendNegotiateContract(ctx context.Context, params NegotiateContractParams) (res *NegotiateContractCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("negotiateContract"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/negotiate/contract"),
 	}
 
@@ -5713,14 +6126,14 @@ func (c *Client) sendNegotiateContract(ctx context.Context, params NegotiateCont
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "NegotiateContract",
+	ctx, span := c.cfg.Tracer.Start(ctx, NegotiateContractOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -5771,7 +6184,7 @@ func (c *Client) sendNegotiateContract(ctx context.Context, params NegotiateCont
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "NegotiateContract", r); {
+			switch err := c.securityAgentToken(ctx, NegotiateContractOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -5833,7 +6246,7 @@ func (c *Client) OrbitShip(ctx context.Context, params OrbitShipParams) (*OrbitS
 func (c *Client) sendOrbitShip(ctx context.Context, params OrbitShipParams) (res *OrbitShipOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("orbit-ship"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/orbit"),
 	}
 
@@ -5842,14 +6255,14 @@ func (c *Client) sendOrbitShip(ctx context.Context, params OrbitShipParams) (res
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "OrbitShip",
+	ctx, span := c.cfg.Tracer.Start(ctx, OrbitShipOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -5900,7 +6313,7 @@ func (c *Client) sendOrbitShip(ctx context.Context, params OrbitShipParams) (res
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "OrbitShip", r); {
+			switch err := c.securityAgentToken(ctx, OrbitShipOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -5959,7 +6372,7 @@ func (c *Client) PatchShipNav(ctx context.Context, request OptPatchShipNavReq, p
 func (c *Client) sendPatchShipNav(ctx context.Context, request OptPatchShipNavReq, params PatchShipNavParams) (res *PatchShipNavOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("patch-ship-nav"),
-		semconv.HTTPMethodKey.String("PATCH"),
+		semconv.HTTPRequestMethodKey.String("PATCH"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/nav"),
 	}
 
@@ -5968,14 +6381,14 @@ func (c *Client) sendPatchShipNav(ctx context.Context, request OptPatchShipNavRe
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "PatchShipNav",
+	ctx, span := c.cfg.Tracer.Start(ctx, PatchShipNavOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -6029,7 +6442,7 @@ func (c *Client) sendPatchShipNav(ctx context.Context, request OptPatchShipNavRe
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "PatchShipNav", r); {
+			switch err := c.securityAgentToken(ctx, PatchShipNavOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -6091,7 +6504,7 @@ func (c *Client) PurchaseCargo(ctx context.Context, request OptPurchaseCargoReq,
 func (c *Client) sendPurchaseCargo(ctx context.Context, request OptPurchaseCargoReq, params PurchaseCargoParams) (res *PurchaseCargoCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("purchase-cargo"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/purchase"),
 	}
 
@@ -6100,14 +6513,14 @@ func (c *Client) sendPurchaseCargo(ctx context.Context, request OptPurchaseCargo
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "PurchaseCargo",
+	ctx, span := c.cfg.Tracer.Start(ctx, PurchaseCargoOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -6161,7 +6574,7 @@ func (c *Client) sendPurchaseCargo(ctx context.Context, request OptPurchaseCargo
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "PurchaseCargo", r); {
+			switch err := c.securityAgentToken(ctx, PurchaseCargoOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -6223,7 +6636,7 @@ func (c *Client) PurchaseShip(ctx context.Context, request OptPurchaseShipReq) (
 func (c *Client) sendPurchaseShip(ctx context.Context, request OptPurchaseShipReq) (res *PurchaseShipCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("purchase-ship"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships"),
 	}
 
@@ -6232,14 +6645,14 @@ func (c *Client) sendPurchaseShip(ctx context.Context, request OptPurchaseShipRe
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "PurchaseShip",
+	ctx, span := c.cfg.Tracer.Start(ctx, PurchaseShipOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -6274,7 +6687,7 @@ func (c *Client) sendPurchaseShip(ctx context.Context, request OptPurchaseShipRe
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "PurchaseShip", r); {
+			switch err := c.securityAgentToken(ctx, PurchaseShipOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -6335,7 +6748,7 @@ func (c *Client) RefuelShip(ctx context.Context, request OptRefuelShipReq, param
 func (c *Client) sendRefuelShip(ctx context.Context, request OptRefuelShipReq, params RefuelShipParams) (res *RefuelShipOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("refuel-ship"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/refuel"),
 	}
 
@@ -6344,14 +6757,14 @@ func (c *Client) sendRefuelShip(ctx context.Context, request OptRefuelShipReq, p
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "RefuelShip",
+	ctx, span := c.cfg.Tracer.Start(ctx, RefuelShipOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -6405,7 +6818,7 @@ func (c *Client) sendRefuelShip(ctx context.Context, request OptRefuelShipReq, p
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "RefuelShip", r); {
+			switch err := c.securityAgentToken(ctx, RefuelShipOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -6460,16 +6873,16 @@ func (c *Client) sendRefuelShip(ctx context.Context, request OptRefuelShipReq, p
 // This new agent will be tied to a starting faction of your choice, which determines your starting
 // location, and will be granted an authorization token, a contract with their starting faction, a
 // command ship that can fly across space with advanced capabilities, a small probe ship that can be
-// used for reconnaissance, and 150,000 credits.
+// used for reconnaissance, and 175,000 credits.
 // > #### Keep your token safe and secure
 // >
-// > Save your token during the alpha phase. There is no way to regenerate this token without
-// starting a new agent. In the future you will be able to generate and manage your tokens from the
-// SpaceTraders website.
+// > Keep careful track of where you store your token. You can generate a new token from our account
+// dashboard, but if someone else gains access to your token they will be able to use it to make API
+// requests on your behalf until the end of the reset.
 // If you are new to SpaceTraders, It is recommended to register with the COSMIC faction, a faction
 // that is well connected to the rest of the universe. After registering, you should try our
 // interactive [quickstart guide](https://docs.spacetraders.io/quickstart/new-game) which will walk
-// you through basic API requests in just a few minutes.
+// you through a few basic API requests in just a few minutes.
 //
 // POST /register
 func (c *Client) Register(ctx context.Context, request OptRegisterReq) (*RegisterCreated, error) {
@@ -6480,7 +6893,7 @@ func (c *Client) Register(ctx context.Context, request OptRegisterReq) (*Registe
 func (c *Client) sendRegister(ctx context.Context, request OptRegisterReq) (res *RegisterCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("register"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/register"),
 	}
 
@@ -6489,14 +6902,14 @@ func (c *Client) sendRegister(ctx context.Context, request OptRegisterReq) (res 
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "Register",
+	ctx, span := c.cfg.Tracer.Start(ctx, RegisterOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -6524,6 +6937,39 @@ func (c *Client) sendRegister(ctx context.Context, request OptRegisterReq) (res 
 	}
 	if err := encodeRegisterRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:AccountToken"
+			switch err := c.securityAccountToken(ctx, RegisterOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AccountToken\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
 	}
 
 	stage = "SendRequest"
@@ -6558,7 +7004,7 @@ func (c *Client) RemoveMount(ctx context.Context, request OptRemoveMountReq, par
 func (c *Client) sendRemoveMount(ctx context.Context, request OptRemoveMountReq, params RemoveMountParams) (res *RemoveMountCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("remove-mount"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/mounts/remove"),
 	}
 
@@ -6567,14 +7013,14 @@ func (c *Client) sendRemoveMount(ctx context.Context, request OptRemoveMountReq,
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "RemoveMount",
+	ctx, span := c.cfg.Tracer.Start(ctx, RemoveMountOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -6628,7 +7074,7 @@ func (c *Client) sendRemoveMount(ctx context.Context, request OptRemoveMountReq,
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "RemoveMount", r); {
+			switch err := c.securityAgentToken(ctx, RemoveMountOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -6672,6 +7118,144 @@ func (c *Client) sendRemoveMount(ctx context.Context, request OptRemoveMountReq,
 	return result, nil
 }
 
+// RemoveShipModule invokes remove-ship-module operation.
+//
+// Remove a module from a ship. The module will be placed in cargo.
+//
+// POST /my/ships/{shipSymbol}/modules/remove
+func (c *Client) RemoveShipModule(ctx context.Context, request OptRemoveShipModuleReq, params RemoveShipModuleParams) (*RemoveShipModuleCreated, error) {
+	res, err := c.sendRemoveShipModule(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendRemoveShipModule(ctx context.Context, request OptRemoveShipModuleReq, params RemoveShipModuleParams) (res *RemoveShipModuleCreated, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("remove-ship-module"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/modules/remove"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RemoveShipModuleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/my/ships/"
+	{
+		// Encode "shipSymbol" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "shipSymbol",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ShipSymbol))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/modules/remove"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeRemoveShipModuleRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:AccountToken"
+			switch err := c.securityAccountToken(ctx, RemoveShipModuleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AccountToken\"")
+			}
+		}
+		{
+			stage = "Security:AgentToken"
+			switch err := c.securityAgentToken(ctx, RemoveShipModuleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"AgentToken\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000011},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRemoveShipModuleResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // RepairShip invokes repair-ship operation.
 //
 // Repair a ship, restoring the ship to maximum condition. The ship must be docked at a waypoint that
@@ -6687,7 +7271,7 @@ func (c *Client) RepairShip(ctx context.Context, params RepairShipParams) (*Repa
 func (c *Client) sendRepairShip(ctx context.Context, params RepairShipParams) (res *RepairShipOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("repair-ship"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/repair"),
 	}
 
@@ -6696,14 +7280,14 @@ func (c *Client) sendRepairShip(ctx context.Context, params RepairShipParams) (r
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "RepairShip",
+	ctx, span := c.cfg.Tracer.Start(ctx, RepairShipOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -6754,7 +7338,7 @@ func (c *Client) sendRepairShip(ctx context.Context, params RepairShipParams) (r
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "RepairShip", r); {
+			switch err := c.securityAgentToken(ctx, RepairShipOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -6813,7 +7397,7 @@ func (c *Client) ScrapShip(ctx context.Context, params ScrapShipParams) (*ScrapS
 func (c *Client) sendScrapShip(ctx context.Context, params ScrapShipParams) (res *ScrapShipOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("scrap-ship"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/scrap"),
 	}
 
@@ -6822,14 +7406,14 @@ func (c *Client) sendScrapShip(ctx context.Context, params ScrapShipParams) (res
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "ScrapShip",
+	ctx, span := c.cfg.Tracer.Start(ctx, ScrapShipOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -6880,7 +7464,7 @@ func (c *Client) sendScrapShip(ctx context.Context, params ScrapShipParams) (res
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "ScrapShip", r); {
+			switch err := c.securityAgentToken(ctx, ScrapShipOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -6938,7 +7522,7 @@ func (c *Client) SellCargo(ctx context.Context, request OptSellCargoReq, params 
 func (c *Client) sendSellCargo(ctx context.Context, request OptSellCargoReq, params SellCargoParams) (res *SellCargoCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("sell-cargo"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/sell"),
 	}
 
@@ -6947,14 +7531,14 @@ func (c *Client) sendSellCargo(ctx context.Context, request OptSellCargoReq, par
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "SellCargo",
+	ctx, span := c.cfg.Tracer.Start(ctx, SellCargoOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -7008,7 +7592,7 @@ func (c *Client) sendSellCargo(ctx context.Context, request OptSellCargoReq, par
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "SellCargo", r); {
+			switch err := c.securityAgentToken(ctx, SellCargoOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -7057,7 +7641,7 @@ func (c *Client) sendSellCargo(ctx context.Context, request OptSellCargoReq, par
 // Attempt to refine the raw materials on your ship. The request will only succeed if your ship is
 // capable of refining at the time of the request. In order to be able to refine, a ship must have
 // goods that can be refined and have installed a `Refinery` module that can refine it.
-// When refining, 30 basic goods will be converted into 10 processed goods.
+// When refining, 100 basic goods will be converted into 10 processed goods.
 //
 // POST /my/ships/{shipSymbol}/refine
 func (c *Client) ShipRefine(ctx context.Context, request OptShipRefineReq, params ShipRefineParams) (*ShipRefineCreated, error) {
@@ -7068,7 +7652,7 @@ func (c *Client) ShipRefine(ctx context.Context, request OptShipRefineReq, param
 func (c *Client) sendShipRefine(ctx context.Context, request OptShipRefineReq, params ShipRefineParams) (res *ShipRefineCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("ship-refine"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/refine"),
 	}
 
@@ -7077,14 +7661,14 @@ func (c *Client) sendShipRefine(ctx context.Context, request OptShipRefineReq, p
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "ShipRefine",
+	ctx, span := c.cfg.Tracer.Start(ctx, ShipRefineOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -7138,7 +7722,7 @@ func (c *Client) sendShipRefine(ctx context.Context, request OptShipRefineReq, p
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "ShipRefine", r); {
+			switch err := c.securityAgentToken(ctx, ShipRefineOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -7184,7 +7768,7 @@ func (c *Client) sendShipRefine(ctx context.Context, request OptShipRefineReq, p
 
 // SiphonResources invokes siphon-resources operation.
 //
-// Siphon gases, such as hydrocarbon, from gas giants.
+// Siphon gases or other resources from gas giants.
 // The ship must be in orbit to be able to siphon and must have siphon mounts and a gas processor
 // installed.
 //
@@ -7197,7 +7781,7 @@ func (c *Client) SiphonResources(ctx context.Context, params SiphonResourcesPara
 func (c *Client) sendSiphonResources(ctx context.Context, params SiphonResourcesParams) (res *SiphonResourcesCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("siphon-resources"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/siphon"),
 	}
 
@@ -7206,14 +7790,14 @@ func (c *Client) sendSiphonResources(ctx context.Context, params SiphonResources
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "SiphonResources",
+	ctx, span := c.cfg.Tracer.Start(ctx, SiphonResourcesOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -7264,7 +7848,7 @@ func (c *Client) sendSiphonResources(ctx context.Context, params SiphonResources
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "SiphonResources", r); {
+			switch err := c.securityAgentToken(ctx, SiphonResourcesOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -7324,7 +7908,7 @@ func (c *Client) SupplyConstruction(ctx context.Context, request OptSupplyConstr
 func (c *Client) sendSupplyConstruction(ctx context.Context, request OptSupplyConstructionReq, params SupplyConstructionParams) (res *SupplyConstructionCreated, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("supply-construction"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/systems/{systemSymbol}/waypoints/{waypointSymbol}/construction/supply"),
 	}
 
@@ -7333,14 +7917,14 @@ func (c *Client) sendSupplyConstruction(ctx context.Context, request OptSupplyCo
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "SupplyConstruction",
+	ctx, span := c.cfg.Tracer.Start(ctx, SupplyConstructionOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -7413,7 +7997,7 @@ func (c *Client) sendSupplyConstruction(ctx context.Context, request OptSupplyCo
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "SupplyConstruction", r); {
+			switch err := c.securityAgentToken(ctx, SupplyConstructionOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -7474,7 +8058,7 @@ func (c *Client) TransferCargo(ctx context.Context, request OptTransferCargoReq,
 func (c *Client) sendTransferCargo(ctx context.Context, request OptTransferCargoReq, params TransferCargoParams) (res *TransferCargoOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("transfer-cargo"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/transfer"),
 	}
 
@@ -7483,14 +8067,14 @@ func (c *Client) sendTransferCargo(ctx context.Context, request OptTransferCargo
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "TransferCargo",
+	ctx, span := c.cfg.Tracer.Start(ctx, TransferCargoOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -7544,7 +8128,7 @@ func (c *Client) sendTransferCargo(ctx context.Context, request OptTransferCargo
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "TransferCargo", r); {
+			switch err := c.securityAgentToken(ctx, TransferCargoOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -7605,7 +8189,7 @@ func (c *Client) WarpShip(ctx context.Context, request OptWarpShipReq, params Wa
 func (c *Client) sendWarpShip(ctx context.Context, request OptWarpShipReq, params WarpShipParams) (res *WarpShipOK, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("warp-ship"),
-		semconv.HTTPMethodKey.String("POST"),
+		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/my/ships/{shipSymbol}/warp"),
 	}
 
@@ -7614,14 +8198,14 @@ func (c *Client) sendWarpShip(ctx context.Context, request OptWarpShipReq, param
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, "WarpShip",
+	ctx, span := c.cfg.Tracer.Start(ctx, WarpShipOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -7675,7 +8259,7 @@ func (c *Client) sendWarpShip(ctx context.Context, request OptWarpShipReq, param
 		var satisfied bitset
 		{
 			stage = "Security:AgentToken"
-			switch err := c.securityAgentToken(ctx, "WarpShip", r); {
+			switch err := c.securityAgentToken(ctx, WarpShipOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):

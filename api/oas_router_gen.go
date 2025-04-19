@@ -50,7 +50,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		switch elem[0] {
 		case '/': // Prefix: "/"
-			origElem := elem
+
 			if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 				elem = elem[l:]
 			} else {
@@ -69,7 +69,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			switch elem[0] {
 			case 'a': // Prefix: "agents"
-				origElem := elem
+
 				if l := len("agents"); len(elem) >= l && elem[0:l] == "agents" {
 					elem = elem[l:]
 				} else {
@@ -88,7 +88,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				switch elem[0] {
 				case '/': // Prefix: "/"
-					origElem := elem
+
 					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 						elem = elem[l:]
 					} else {
@@ -96,7 +96,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					}
 
 					// Param: "agentSymbol"
-					// Leaf parameter
+					// Leaf parameter, slashes are prohibited
+					idx := strings.IndexByte(elem, '/')
+					if idx >= 0 {
+						break
+					}
 					args[0] = elem
 					elem = ""
 
@@ -114,12 +118,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 
-					elem = origElem
 				}
 
-				elem = origElem
 			case 'f': // Prefix: "factions"
-				origElem := elem
+
 				if l := len("factions"); len(elem) >= l && elem[0:l] == "factions" {
 					elem = elem[l:]
 				} else {
@@ -138,7 +140,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				switch elem[0] {
 				case '/': // Prefix: "/"
-					origElem := elem
+
 					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 						elem = elem[l:]
 					} else {
@@ -146,7 +148,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					}
 
 					// Param: "factionSymbol"
-					// Leaf parameter
+					// Leaf parameter, slashes are prohibited
+					idx := strings.IndexByte(elem, '/')
+					if idx >= 0 {
+						break
+					}
 					args[0] = elem
 					elem = ""
 
@@ -164,13 +170,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 
-					elem = origElem
 				}
 
-				elem = origElem
-			case 'm': // Prefix: "my/"
-				origElem := elem
-				if l := len("my/"); len(elem) >= l && elem[0:l] == "my/" {
+			case 'm': // Prefix: "m"
+
+				if l := len("m"); len(elem) >= l && elem[0:l] == "m" {
 					elem = elem[l:]
 				} else {
 					break
@@ -180,9 +184,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 				switch elem[0] {
-				case 'a': // Prefix: "agent"
-					origElem := elem
-					if l := len("agent"); len(elem) >= l && elem[0:l] == "agent" {
+				case 'a': // Prefix: "arket/supply-chain"
+
+					if l := len("arket/supply-chain"); len(elem) >= l && elem[0:l] == "arket/supply-chain" {
 						elem = elem[l:]
 					} else {
 						break
@@ -192,7 +196,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						// Leaf node.
 						switch r.Method {
 						case "GET":
-							s.handleGetMyAgentRequest([0]string{}, elemIsEscaped, w, r)
+							s.handleGetSupplyChainRequest([0]string{}, elemIsEscaped, w, r)
 						default:
 							s.notAllowed(w, r, "GET")
 						}
@@ -200,49 +204,50 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 
-					elem = origElem
-				case 'c': // Prefix: "contracts"
-					origElem := elem
-					if l := len("contracts"); len(elem) >= l && elem[0:l] == "contracts" {
+				case 'y': // Prefix: "y/"
+
+					if l := len("y/"); len(elem) >= l && elem[0:l] == "y/" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
 					if len(elem) == 0 {
-						switch r.Method {
-						case "GET":
-							s.handleGetContractsRequest([0]string{}, elemIsEscaped, w, r)
-						default:
-							s.notAllowed(w, r, "GET")
-						}
-
-						return
+						break
 					}
 					switch elem[0] {
-					case '/': // Prefix: "/"
-						origElem := elem
-						if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+					case 'a': // Prefix: "agent"
+
+						if l := len("agent"); len(elem) >= l && elem[0:l] == "agent" {
 							elem = elem[l:]
 						} else {
 							break
 						}
 
-						// Param: "contractId"
-						// Match until "/"
-						idx := strings.IndexByte(elem, '/')
-						if idx < 0 {
-							idx = len(elem)
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "GET":
+								s.handleGetMyAgentRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, "GET")
+							}
+
+							return
 						}
-						args[0] = elem[:idx]
-						elem = elem[idx:]
+
+					case 'c': // Prefix: "contracts"
+
+						if l := len("contracts"); len(elem) >= l && elem[0:l] == "contracts" {
+							elem = elem[l:]
+						} else {
+							break
+						}
 
 						if len(elem) == 0 {
 							switch r.Method {
 							case "GET":
-								s.handleGetContractRequest([1]string{
-									args[0],
-								}, elemIsEscaped, w, r)
+								s.handleGetContractsRequest([0]string{}, elemIsEscaped, w, r)
 							default:
 								s.notAllowed(w, r, "GET")
 							}
@@ -251,699 +256,173 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						}
 						switch elem[0] {
 						case '/': // Prefix: "/"
-							origElem := elem
+
 							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 								elem = elem[l:]
 							} else {
 								break
 							}
 
+							// Param: "contractId"
+							// Match until "/"
+							idx := strings.IndexByte(elem, '/')
+							if idx < 0 {
+								idx = len(elem)
+							}
+							args[0] = elem[:idx]
+							elem = elem[idx:]
+
 							if len(elem) == 0 {
-								break
+								switch r.Method {
+								case "GET":
+									s.handleGetContractRequest([1]string{
+										args[0],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, "GET")
+								}
+
+								return
 							}
 							switch elem[0] {
-							case 'a': // Prefix: "accept"
-								origElem := elem
-								if l := len("accept"); len(elem) >= l && elem[0:l] == "accept" {
+							case '/': // Prefix: "/"
+
+								if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 									elem = elem[l:]
 								} else {
 									break
 								}
 
 								if len(elem) == 0 {
-									// Leaf node.
-									switch r.Method {
-									case "POST":
-										s.handleAcceptContractRequest([1]string{
-											args[0],
-										}, elemIsEscaped, w, r)
-									default:
-										s.notAllowed(w, r, "POST")
-									}
-
-									return
-								}
-
-								elem = origElem
-							case 'd': // Prefix: "deliver"
-								origElem := elem
-								if l := len("deliver"); len(elem) >= l && elem[0:l] == "deliver" {
-									elem = elem[l:]
-								} else {
 									break
 								}
+								switch elem[0] {
+								case 'a': // Prefix: "accept"
 
-								if len(elem) == 0 {
-									// Leaf node.
-									switch r.Method {
-									case "POST":
-										s.handleDeliverContractRequest([1]string{
-											args[0],
-										}, elemIsEscaped, w, r)
-									default:
-										s.notAllowed(w, r, "POST")
+									if l := len("accept"); len(elem) >= l && elem[0:l] == "accept" {
+										elem = elem[l:]
+									} else {
+										break
 									}
 
-									return
-								}
+									if len(elem) == 0 {
+										// Leaf node.
+										switch r.Method {
+										case "POST":
+											s.handleAcceptContractRequest([1]string{
+												args[0],
+											}, elemIsEscaped, w, r)
+										default:
+											s.notAllowed(w, r, "POST")
+										}
 
-								elem = origElem
-							case 'f': // Prefix: "fulfill"
-								origElem := elem
-								if l := len("fulfill"); len(elem) >= l && elem[0:l] == "fulfill" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									// Leaf node.
-									switch r.Method {
-									case "POST":
-										s.handleFulfillContractRequest([1]string{
-											args[0],
-										}, elemIsEscaped, w, r)
-									default:
-										s.notAllowed(w, r, "POST")
+										return
 									}
 
-									return
+								case 'd': // Prefix: "deliver"
+
+									if l := len("deliver"); len(elem) >= l && elem[0:l] == "deliver" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
+										switch r.Method {
+										case "POST":
+											s.handleDeliverContractRequest([1]string{
+												args[0],
+											}, elemIsEscaped, w, r)
+										default:
+											s.notAllowed(w, r, "POST")
+										}
+
+										return
+									}
+
+								case 'f': // Prefix: "fulfill"
+
+									if l := len("fulfill"); len(elem) >= l && elem[0:l] == "fulfill" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
+										switch r.Method {
+										case "POST":
+											s.handleFulfillContractRequest([1]string{
+												args[0],
+											}, elemIsEscaped, w, r)
+										default:
+											s.notAllowed(w, r, "POST")
+										}
+
+										return
+									}
+
 								}
 
-								elem = origElem
 							}
 
-							elem = origElem
 						}
 
-						elem = origElem
-					}
+					case 's': // Prefix: "ships"
 
-					elem = origElem
-				case 's': // Prefix: "ships"
-					origElem := elem
-					if l := len("ships"); len(elem) >= l && elem[0:l] == "ships" {
-						elem = elem[l:]
-					} else {
-						break
-					}
-
-					if len(elem) == 0 {
-						switch r.Method {
-						case "GET":
-							s.handleGetMyShipsRequest([0]string{}, elemIsEscaped, w, r)
-						case "POST":
-							s.handlePurchaseShipRequest([0]string{}, elemIsEscaped, w, r)
-						default:
-							s.notAllowed(w, r, "GET,POST")
-						}
-
-						return
-					}
-					switch elem[0] {
-					case '/': // Prefix: "/"
-						origElem := elem
-						if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+						if l := len("ships"); len(elem) >= l && elem[0:l] == "ships" {
 							elem = elem[l:]
 						} else {
 							break
 						}
 
-						// Param: "shipSymbol"
-						// Match until "/"
-						idx := strings.IndexByte(elem, '/')
-						if idx < 0 {
-							idx = len(elem)
-						}
-						args[0] = elem[:idx]
-						elem = elem[idx:]
-
 						if len(elem) == 0 {
 							switch r.Method {
 							case "GET":
-								s.handleGetMyShipRequest([1]string{
-									args[0],
-								}, elemIsEscaped, w, r)
+								s.handleGetMyShipsRequest([0]string{}, elemIsEscaped, w, r)
+							case "POST":
+								s.handlePurchaseShipRequest([0]string{}, elemIsEscaped, w, r)
 							default:
-								s.notAllowed(w, r, "GET")
+								s.notAllowed(w, r, "GET,POST")
 							}
 
 							return
 						}
 						switch elem[0] {
 						case '/': // Prefix: "/"
-							origElem := elem
+
 							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 								elem = elem[l:]
 							} else {
 								break
 							}
 
+							// Param: "shipSymbol"
+							// Match until "/"
+							idx := strings.IndexByte(elem, '/')
+							if idx < 0 {
+								idx = len(elem)
+							}
+							args[0] = elem[:idx]
+							elem = elem[idx:]
+
 							if len(elem) == 0 {
-								break
+								switch r.Method {
+								case "GET":
+									s.handleGetMyShipRequest([1]string{
+										args[0],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, "GET")
+								}
+
+								return
 							}
 							switch elem[0] {
-							case 'c': // Prefix: "c"
-								origElem := elem
-								if l := len("c"); len(elem) >= l && elem[0:l] == "c" {
-									elem = elem[l:]
-								} else {
-									break
-								}
+							case '/': // Prefix: "/"
 
-								if len(elem) == 0 {
-									break
-								}
-								switch elem[0] {
-								case 'a': // Prefix: "argo"
-									origElem := elem
-									if l := len("argo"); len(elem) >= l && elem[0:l] == "argo" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										// Leaf node.
-										switch r.Method {
-										case "GET":
-											s.handleGetMyShipCargoRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										default:
-											s.notAllowed(w, r, "GET")
-										}
-
-										return
-									}
-
-									elem = origElem
-								case 'h': // Prefix: "hart"
-									origElem := elem
-									if l := len("hart"); len(elem) >= l && elem[0:l] == "hart" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										// Leaf node.
-										switch r.Method {
-										case "POST":
-											s.handleCreateChartRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										default:
-											s.notAllowed(w, r, "POST")
-										}
-
-										return
-									}
-
-									elem = origElem
-								case 'o': // Prefix: "ooldown"
-									origElem := elem
-									if l := len("ooldown"); len(elem) >= l && elem[0:l] == "ooldown" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										// Leaf node.
-										switch r.Method {
-										case "GET":
-											s.handleGetShipCooldownRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										default:
-											s.notAllowed(w, r, "GET")
-										}
-
-										return
-									}
-
-									elem = origElem
-								}
-
-								elem = origElem
-							case 'd': // Prefix: "dock"
-								origElem := elem
-								if l := len("dock"); len(elem) >= l && elem[0:l] == "dock" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									// Leaf node.
-									switch r.Method {
-									case "POST":
-										s.handleDockShipRequest([1]string{
-											args[0],
-										}, elemIsEscaped, w, r)
-									default:
-										s.notAllowed(w, r, "POST")
-									}
-
-									return
-								}
-
-								elem = origElem
-							case 'e': // Prefix: "extract"
-								origElem := elem
-								if l := len("extract"); len(elem) >= l && elem[0:l] == "extract" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									switch r.Method {
-									case "POST":
-										s.handleExtractResourcesRequest([1]string{
-											args[0],
-										}, elemIsEscaped, w, r)
-									default:
-										s.notAllowed(w, r, "POST")
-									}
-
-									return
-								}
-								switch elem[0] {
-								case '/': // Prefix: "/survey"
-									origElem := elem
-									if l := len("/survey"); len(elem) >= l && elem[0:l] == "/survey" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										// Leaf node.
-										switch r.Method {
-										case "POST":
-											s.handleExtractResourcesWithSurveyRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										default:
-											s.notAllowed(w, r, "POST")
-										}
-
-										return
-									}
-
-									elem = origElem
-								}
-
-								elem = origElem
-							case 'j': // Prefix: "j"
-								origElem := elem
-								if l := len("j"); len(elem) >= l && elem[0:l] == "j" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									break
-								}
-								switch elem[0] {
-								case 'e': // Prefix: "ettison"
-									origElem := elem
-									if l := len("ettison"); len(elem) >= l && elem[0:l] == "ettison" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										// Leaf node.
-										switch r.Method {
-										case "POST":
-											s.handleJettisonRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										default:
-											s.notAllowed(w, r, "POST")
-										}
-
-										return
-									}
-
-									elem = origElem
-								case 'u': // Prefix: "ump"
-									origElem := elem
-									if l := len("ump"); len(elem) >= l && elem[0:l] == "ump" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										// Leaf node.
-										switch r.Method {
-										case "POST":
-											s.handleJumpShipRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										default:
-											s.notAllowed(w, r, "POST")
-										}
-
-										return
-									}
-
-									elem = origElem
-								}
-
-								elem = origElem
-							case 'm': // Prefix: "mounts"
-								origElem := elem
-								if l := len("mounts"); len(elem) >= l && elem[0:l] == "mounts" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									switch r.Method {
-									case "GET":
-										s.handleGetMountsRequest([1]string{
-											args[0],
-										}, elemIsEscaped, w, r)
-									default:
-										s.notAllowed(w, r, "GET")
-									}
-
-									return
-								}
-								switch elem[0] {
-								case '/': // Prefix: "/"
-									origElem := elem
-									if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										break
-									}
-									switch elem[0] {
-									case 'i': // Prefix: "install"
-										origElem := elem
-										if l := len("install"); len(elem) >= l && elem[0:l] == "install" {
-											elem = elem[l:]
-										} else {
-											break
-										}
-
-										if len(elem) == 0 {
-											// Leaf node.
-											switch r.Method {
-											case "POST":
-												s.handleInstallMountRequest([1]string{
-													args[0],
-												}, elemIsEscaped, w, r)
-											default:
-												s.notAllowed(w, r, "POST")
-											}
-
-											return
-										}
-
-										elem = origElem
-									case 'r': // Prefix: "remove"
-										origElem := elem
-										if l := len("remove"); len(elem) >= l && elem[0:l] == "remove" {
-											elem = elem[l:]
-										} else {
-											break
-										}
-
-										if len(elem) == 0 {
-											// Leaf node.
-											switch r.Method {
-											case "POST":
-												s.handleRemoveMountRequest([1]string{
-													args[0],
-												}, elemIsEscaped, w, r)
-											default:
-												s.notAllowed(w, r, "POST")
-											}
-
-											return
-										}
-
-										elem = origElem
-									}
-
-									elem = origElem
-								}
-
-								elem = origElem
-							case 'n': // Prefix: "n"
-								origElem := elem
-								if l := len("n"); len(elem) >= l && elem[0:l] == "n" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									break
-								}
-								switch elem[0] {
-								case 'a': // Prefix: "av"
-									origElem := elem
-									if l := len("av"); len(elem) >= l && elem[0:l] == "av" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										switch r.Method {
-										case "GET":
-											s.handleGetShipNavRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										case "PATCH":
-											s.handlePatchShipNavRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										default:
-											s.notAllowed(w, r, "GET,PATCH")
-										}
-
-										return
-									}
-									switch elem[0] {
-									case 'i': // Prefix: "igate"
-										origElem := elem
-										if l := len("igate"); len(elem) >= l && elem[0:l] == "igate" {
-											elem = elem[l:]
-										} else {
-											break
-										}
-
-										if len(elem) == 0 {
-											// Leaf node.
-											switch r.Method {
-											case "POST":
-												s.handleNavigateShipRequest([1]string{
-													args[0],
-												}, elemIsEscaped, w, r)
-											default:
-												s.notAllowed(w, r, "POST")
-											}
-
-											return
-										}
-
-										elem = origElem
-									}
-
-									elem = origElem
-								case 'e': // Prefix: "egotiate/contract"
-									origElem := elem
-									if l := len("egotiate/contract"); len(elem) >= l && elem[0:l] == "egotiate/contract" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										// Leaf node.
-										switch r.Method {
-										case "POST":
-											s.handleNegotiateContractRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										default:
-											s.notAllowed(w, r, "POST")
-										}
-
-										return
-									}
-
-									elem = origElem
-								}
-
-								elem = origElem
-							case 'o': // Prefix: "orbit"
-								origElem := elem
-								if l := len("orbit"); len(elem) >= l && elem[0:l] == "orbit" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									// Leaf node.
-									switch r.Method {
-									case "POST":
-										s.handleOrbitShipRequest([1]string{
-											args[0],
-										}, elemIsEscaped, w, r)
-									default:
-										s.notAllowed(w, r, "POST")
-									}
-
-									return
-								}
-
-								elem = origElem
-							case 'p': // Prefix: "purchase"
-								origElem := elem
-								if l := len("purchase"); len(elem) >= l && elem[0:l] == "purchase" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									// Leaf node.
-									switch r.Method {
-									case "POST":
-										s.handlePurchaseCargoRequest([1]string{
-											args[0],
-										}, elemIsEscaped, w, r)
-									default:
-										s.notAllowed(w, r, "POST")
-									}
-
-									return
-								}
-
-								elem = origElem
-							case 'r': // Prefix: "re"
-								origElem := elem
-								if l := len("re"); len(elem) >= l && elem[0:l] == "re" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									break
-								}
-								switch elem[0] {
-								case 'f': // Prefix: "f"
-									origElem := elem
-									if l := len("f"); len(elem) >= l && elem[0:l] == "f" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										break
-									}
-									switch elem[0] {
-									case 'i': // Prefix: "ine"
-										origElem := elem
-										if l := len("ine"); len(elem) >= l && elem[0:l] == "ine" {
-											elem = elem[l:]
-										} else {
-											break
-										}
-
-										if len(elem) == 0 {
-											// Leaf node.
-											switch r.Method {
-											case "POST":
-												s.handleShipRefineRequest([1]string{
-													args[0],
-												}, elemIsEscaped, w, r)
-											default:
-												s.notAllowed(w, r, "POST")
-											}
-
-											return
-										}
-
-										elem = origElem
-									case 'u': // Prefix: "uel"
-										origElem := elem
-										if l := len("uel"); len(elem) >= l && elem[0:l] == "uel" {
-											elem = elem[l:]
-										} else {
-											break
-										}
-
-										if len(elem) == 0 {
-											// Leaf node.
-											switch r.Method {
-											case "POST":
-												s.handleRefuelShipRequest([1]string{
-													args[0],
-												}, elemIsEscaped, w, r)
-											default:
-												s.notAllowed(w, r, "POST")
-											}
-
-											return
-										}
-
-										elem = origElem
-									}
-
-									elem = origElem
-								case 'p': // Prefix: "pair"
-									origElem := elem
-									if l := len("pair"); len(elem) >= l && elem[0:l] == "pair" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										// Leaf node.
-										switch r.Method {
-										case "GET":
-											s.handleGetRepairShipRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										case "POST":
-											s.handleRepairShipRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										default:
-											s.notAllowed(w, r, "GET,POST")
-										}
-
-										return
-									}
-
-									elem = origElem
-								}
-
-								elem = origElem
-							case 's': // Prefix: "s"
-								origElem := elem
-								if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
+								if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 									elem = elem[l:]
 								} else {
 									break
@@ -954,7 +433,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								}
 								switch elem[0] {
 								case 'c': // Prefix: "c"
-									origElem := elem
+
 									if l := len("c"); len(elem) >= l && elem[0:l] == "c" {
 										elem = elem[l:]
 									} else {
@@ -965,108 +444,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										break
 									}
 									switch elem[0] {
-									case 'a': // Prefix: "an/"
-										origElem := elem
-										if l := len("an/"); len(elem) >= l && elem[0:l] == "an/" {
-											elem = elem[l:]
-										} else {
-											break
-										}
+									case 'a': // Prefix: "argo"
 
-										if len(elem) == 0 {
-											break
-										}
-										switch elem[0] {
-										case 's': // Prefix: "s"
-											origElem := elem
-											if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
-												elem = elem[l:]
-											} else {
-												break
-											}
-
-											if len(elem) == 0 {
-												break
-											}
-											switch elem[0] {
-											case 'h': // Prefix: "hips"
-												origElem := elem
-												if l := len("hips"); len(elem) >= l && elem[0:l] == "hips" {
-													elem = elem[l:]
-												} else {
-													break
-												}
-
-												if len(elem) == 0 {
-													// Leaf node.
-													switch r.Method {
-													case "POST":
-														s.handleCreateShipShipScanRequest([1]string{
-															args[0],
-														}, elemIsEscaped, w, r)
-													default:
-														s.notAllowed(w, r, "POST")
-													}
-
-													return
-												}
-
-												elem = origElem
-											case 'y': // Prefix: "ystems"
-												origElem := elem
-												if l := len("ystems"); len(elem) >= l && elem[0:l] == "ystems" {
-													elem = elem[l:]
-												} else {
-													break
-												}
-
-												if len(elem) == 0 {
-													// Leaf node.
-													switch r.Method {
-													case "POST":
-														s.handleCreateShipSystemScanRequest([1]string{
-															args[0],
-														}, elemIsEscaped, w, r)
-													default:
-														s.notAllowed(w, r, "POST")
-													}
-
-													return
-												}
-
-												elem = origElem
-											}
-
-											elem = origElem
-										case 'w': // Prefix: "waypoints"
-											origElem := elem
-											if l := len("waypoints"); len(elem) >= l && elem[0:l] == "waypoints" {
-												elem = elem[l:]
-											} else {
-												break
-											}
-
-											if len(elem) == 0 {
-												// Leaf node.
-												switch r.Method {
-												case "POST":
-													s.handleCreateShipWaypointScanRequest([1]string{
-														args[0],
-													}, elemIsEscaped, w, r)
-												default:
-													s.notAllowed(w, r, "POST")
-												}
-
-												return
-											}
-
-											elem = origElem
-										}
-
-										elem = origElem
-									case 'r': // Prefix: "rap"
-										origElem := elem
-										if l := len("rap"); len(elem) >= l && elem[0:l] == "rap" {
+										if l := len("argo"); len(elem) >= l && elem[0:l] == "argo" {
 											elem = elem[l:]
 										} else {
 											break
@@ -1076,11 +456,579 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 											// Leaf node.
 											switch r.Method {
 											case "GET":
-												s.handleGetScrapShipRequest([1]string{
+												s.handleGetMyShipCargoRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "GET")
+											}
+
+											return
+										}
+
+									case 'h': // Prefix: "hart"
+
+										if l := len("hart"); len(elem) >= l && elem[0:l] == "hart" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "POST":
+												s.handleCreateChartRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "POST")
+											}
+
+											return
+										}
+
+									case 'o': // Prefix: "ooldown"
+
+										if l := len("ooldown"); len(elem) >= l && elem[0:l] == "ooldown" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "GET":
+												s.handleGetShipCooldownRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "GET")
+											}
+
+											return
+										}
+
+									}
+
+								case 'd': // Prefix: "dock"
+
+									if l := len("dock"); len(elem) >= l && elem[0:l] == "dock" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
+										switch r.Method {
+										case "POST":
+											s.handleDockShipRequest([1]string{
+												args[0],
+											}, elemIsEscaped, w, r)
+										default:
+											s.notAllowed(w, r, "POST")
+										}
+
+										return
+									}
+
+								case 'e': // Prefix: "extract"
+
+									if l := len("extract"); len(elem) >= l && elem[0:l] == "extract" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										switch r.Method {
+										case "POST":
+											s.handleExtractResourcesRequest([1]string{
+												args[0],
+											}, elemIsEscaped, w, r)
+										default:
+											s.notAllowed(w, r, "POST")
+										}
+
+										return
+									}
+									switch elem[0] {
+									case '/': // Prefix: "/survey"
+
+										if l := len("/survey"); len(elem) >= l && elem[0:l] == "/survey" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "POST":
+												s.handleExtractResourcesWithSurveyRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "POST")
+											}
+
+											return
+										}
+
+									}
+
+								case 'j': // Prefix: "j"
+
+									if l := len("j"); len(elem) >= l && elem[0:l] == "j" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										break
+									}
+									switch elem[0] {
+									case 'e': // Prefix: "ettison"
+
+										if l := len("ettison"); len(elem) >= l && elem[0:l] == "ettison" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "POST":
+												s.handleJettisonRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "POST")
+											}
+
+											return
+										}
+
+									case 'u': // Prefix: "ump"
+
+										if l := len("ump"); len(elem) >= l && elem[0:l] == "ump" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "POST":
+												s.handleJumpShipRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "POST")
+											}
+
+											return
+										}
+
+									}
+
+								case 'm': // Prefix: "mo"
+
+									if l := len("mo"); len(elem) >= l && elem[0:l] == "mo" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										break
+									}
+									switch elem[0] {
+									case 'd': // Prefix: "dules"
+
+										if l := len("dules"); len(elem) >= l && elem[0:l] == "dules" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											switch r.Method {
+											case "GET":
+												s.handleGetShipModulesRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "GET")
+											}
+
+											return
+										}
+										switch elem[0] {
+										case '/': // Prefix: "/"
+
+											if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												break
+											}
+											switch elem[0] {
+											case 'i': // Prefix: "install"
+
+												if l := len("install"); len(elem) >= l && elem[0:l] == "install" {
+													elem = elem[l:]
+												} else {
+													break
+												}
+
+												if len(elem) == 0 {
+													// Leaf node.
+													switch r.Method {
+													case "POST":
+														s.handleInstallShipModuleRequest([1]string{
+															args[0],
+														}, elemIsEscaped, w, r)
+													default:
+														s.notAllowed(w, r, "POST")
+													}
+
+													return
+												}
+
+											case 'r': // Prefix: "remove"
+
+												if l := len("remove"); len(elem) >= l && elem[0:l] == "remove" {
+													elem = elem[l:]
+												} else {
+													break
+												}
+
+												if len(elem) == 0 {
+													// Leaf node.
+													switch r.Method {
+													case "POST":
+														s.handleRemoveShipModuleRequest([1]string{
+															args[0],
+														}, elemIsEscaped, w, r)
+													default:
+														s.notAllowed(w, r, "POST")
+													}
+
+													return
+												}
+
+											}
+
+										}
+
+									case 'u': // Prefix: "unts"
+
+										if l := len("unts"); len(elem) >= l && elem[0:l] == "unts" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											switch r.Method {
+											case "GET":
+												s.handleGetMountsRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "GET")
+											}
+
+											return
+										}
+										switch elem[0] {
+										case '/': // Prefix: "/"
+
+											if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												break
+											}
+											switch elem[0] {
+											case 'i': // Prefix: "install"
+
+												if l := len("install"); len(elem) >= l && elem[0:l] == "install" {
+													elem = elem[l:]
+												} else {
+													break
+												}
+
+												if len(elem) == 0 {
+													// Leaf node.
+													switch r.Method {
+													case "POST":
+														s.handleInstallMountRequest([1]string{
+															args[0],
+														}, elemIsEscaped, w, r)
+													default:
+														s.notAllowed(w, r, "POST")
+													}
+
+													return
+												}
+
+											case 'r': // Prefix: "remove"
+
+												if l := len("remove"); len(elem) >= l && elem[0:l] == "remove" {
+													elem = elem[l:]
+												} else {
+													break
+												}
+
+												if len(elem) == 0 {
+													// Leaf node.
+													switch r.Method {
+													case "POST":
+														s.handleRemoveMountRequest([1]string{
+															args[0],
+														}, elemIsEscaped, w, r)
+													default:
+														s.notAllowed(w, r, "POST")
+													}
+
+													return
+												}
+
+											}
+
+										}
+
+									}
+
+								case 'n': // Prefix: "n"
+
+									if l := len("n"); len(elem) >= l && elem[0:l] == "n" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										break
+									}
+									switch elem[0] {
+									case 'a': // Prefix: "av"
+
+										if l := len("av"); len(elem) >= l && elem[0:l] == "av" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											switch r.Method {
+											case "GET":
+												s.handleGetShipNavRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											case "PATCH":
+												s.handlePatchShipNavRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "GET,PATCH")
+											}
+
+											return
+										}
+										switch elem[0] {
+										case 'i': // Prefix: "igate"
+
+											if l := len("igate"); len(elem) >= l && elem[0:l] == "igate" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												// Leaf node.
+												switch r.Method {
+												case "POST":
+													s.handleNavigateShipRequest([1]string{
+														args[0],
+													}, elemIsEscaped, w, r)
+												default:
+													s.notAllowed(w, r, "POST")
+												}
+
+												return
+											}
+
+										}
+
+									case 'e': // Prefix: "egotiate/contract"
+
+										if l := len("egotiate/contract"); len(elem) >= l && elem[0:l] == "egotiate/contract" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "POST":
+												s.handleNegotiateContractRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "POST")
+											}
+
+											return
+										}
+
+									}
+
+								case 'o': // Prefix: "orbit"
+
+									if l := len("orbit"); len(elem) >= l && elem[0:l] == "orbit" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
+										switch r.Method {
+										case "POST":
+											s.handleOrbitShipRequest([1]string{
+												args[0],
+											}, elemIsEscaped, w, r)
+										default:
+											s.notAllowed(w, r, "POST")
+										}
+
+										return
+									}
+
+								case 'p': // Prefix: "purchase"
+
+									if l := len("purchase"); len(elem) >= l && elem[0:l] == "purchase" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
+										switch r.Method {
+										case "POST":
+											s.handlePurchaseCargoRequest([1]string{
+												args[0],
+											}, elemIsEscaped, w, r)
+										default:
+											s.notAllowed(w, r, "POST")
+										}
+
+										return
+									}
+
+								case 'r': // Prefix: "re"
+
+									if l := len("re"); len(elem) >= l && elem[0:l] == "re" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										break
+									}
+									switch elem[0] {
+									case 'f': // Prefix: "f"
+
+										if l := len("f"); len(elem) >= l && elem[0:l] == "f" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											break
+										}
+										switch elem[0] {
+										case 'i': // Prefix: "ine"
+
+											if l := len("ine"); len(elem) >= l && elem[0:l] == "ine" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												// Leaf node.
+												switch r.Method {
+												case "POST":
+													s.handleShipRefineRequest([1]string{
+														args[0],
+													}, elemIsEscaped, w, r)
+												default:
+													s.notAllowed(w, r, "POST")
+												}
+
+												return
+											}
+
+										case 'u': // Prefix: "uel"
+
+											if l := len("uel"); len(elem) >= l && elem[0:l] == "uel" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												// Leaf node.
+												switch r.Method {
+												case "POST":
+													s.handleRefuelShipRequest([1]string{
+														args[0],
+													}, elemIsEscaped, w, r)
+												default:
+													s.notAllowed(w, r, "POST")
+												}
+
+												return
+											}
+
+										}
+
+									case 'p': // Prefix: "pair"
+
+										if l := len("pair"); len(elem) >= l && elem[0:l] == "pair" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "GET":
+												s.handleGetRepairShipRequest([1]string{
 													args[0],
 												}, elemIsEscaped, w, r)
 											case "POST":
-												s.handleScrapShipRequest([1]string{
+												s.handleRepairShipRequest([1]string{
 													args[0],
 												}, elemIsEscaped, w, r)
 											default:
@@ -1090,13 +1038,225 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 											return
 										}
 
-										elem = origElem
 									}
 
-									elem = origElem
-								case 'e': // Prefix: "ell"
-									origElem := elem
-									if l := len("ell"); len(elem) >= l && elem[0:l] == "ell" {
+								case 's': // Prefix: "s"
+
+									if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										break
+									}
+									switch elem[0] {
+									case 'c': // Prefix: "c"
+
+										if l := len("c"); len(elem) >= l && elem[0:l] == "c" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											break
+										}
+										switch elem[0] {
+										case 'a': // Prefix: "an/"
+
+											if l := len("an/"); len(elem) >= l && elem[0:l] == "an/" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												break
+											}
+											switch elem[0] {
+											case 's': // Prefix: "s"
+
+												if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
+													elem = elem[l:]
+												} else {
+													break
+												}
+
+												if len(elem) == 0 {
+													break
+												}
+												switch elem[0] {
+												case 'h': // Prefix: "hips"
+
+													if l := len("hips"); len(elem) >= l && elem[0:l] == "hips" {
+														elem = elem[l:]
+													} else {
+														break
+													}
+
+													if len(elem) == 0 {
+														// Leaf node.
+														switch r.Method {
+														case "POST":
+															s.handleCreateShipShipScanRequest([1]string{
+																args[0],
+															}, elemIsEscaped, w, r)
+														default:
+															s.notAllowed(w, r, "POST")
+														}
+
+														return
+													}
+
+												case 'y': // Prefix: "ystems"
+
+													if l := len("ystems"); len(elem) >= l && elem[0:l] == "ystems" {
+														elem = elem[l:]
+													} else {
+														break
+													}
+
+													if len(elem) == 0 {
+														// Leaf node.
+														switch r.Method {
+														case "POST":
+															s.handleCreateShipSystemScanRequest([1]string{
+																args[0],
+															}, elemIsEscaped, w, r)
+														default:
+															s.notAllowed(w, r, "POST")
+														}
+
+														return
+													}
+
+												}
+
+											case 'w': // Prefix: "waypoints"
+
+												if l := len("waypoints"); len(elem) >= l && elem[0:l] == "waypoints" {
+													elem = elem[l:]
+												} else {
+													break
+												}
+
+												if len(elem) == 0 {
+													// Leaf node.
+													switch r.Method {
+													case "POST":
+														s.handleCreateShipWaypointScanRequest([1]string{
+															args[0],
+														}, elemIsEscaped, w, r)
+													default:
+														s.notAllowed(w, r, "POST")
+													}
+
+													return
+												}
+
+											}
+
+										case 'r': // Prefix: "rap"
+
+											if l := len("rap"); len(elem) >= l && elem[0:l] == "rap" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												// Leaf node.
+												switch r.Method {
+												case "GET":
+													s.handleGetScrapShipRequest([1]string{
+														args[0],
+													}, elemIsEscaped, w, r)
+												case "POST":
+													s.handleScrapShipRequest([1]string{
+														args[0],
+													}, elemIsEscaped, w, r)
+												default:
+													s.notAllowed(w, r, "GET,POST")
+												}
+
+												return
+											}
+
+										}
+
+									case 'e': // Prefix: "ell"
+
+										if l := len("ell"); len(elem) >= l && elem[0:l] == "ell" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "POST":
+												s.handleSellCargoRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "POST")
+											}
+
+											return
+										}
+
+									case 'i': // Prefix: "iphon"
+
+										if l := len("iphon"); len(elem) >= l && elem[0:l] == "iphon" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "POST":
+												s.handleSiphonResourcesRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "POST")
+											}
+
+											return
+										}
+
+									case 'u': // Prefix: "urvey"
+
+										if l := len("urvey"); len(elem) >= l && elem[0:l] == "urvey" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "POST":
+												s.handleCreateSurveyRequest([1]string{
+													args[0],
+												}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, "POST")
+											}
+
+											return
+										}
+
+									}
+
+								case 't': // Prefix: "transfer"
+
+									if l := len("transfer"); len(elem) >= l && elem[0:l] == "transfer" {
 										elem = elem[l:]
 									} else {
 										break
@@ -1106,7 +1266,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										// Leaf node.
 										switch r.Method {
 										case "POST":
-											s.handleSellCargoRequest([1]string{
+											s.handleTransferCargoRequest([1]string{
 												args[0],
 											}, elemIsEscaped, w, r)
 										default:
@@ -1116,10 +1276,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										return
 									}
 
-									elem = origElem
-								case 'i': // Prefix: "iphon"
-									origElem := elem
-									if l := len("iphon"); len(elem) >= l && elem[0:l] == "iphon" {
+								case 'w': // Prefix: "warp"
+
+									if l := len("warp"); len(elem) >= l && elem[0:l] == "warp" {
 										elem = elem[l:]
 									} else {
 										break
@@ -1129,7 +1288,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										// Leaf node.
 										switch r.Method {
 										case "POST":
-											s.handleSiphonResourcesRequest([1]string{
+											s.handleWarpShipRequest([1]string{
 												args[0],
 											}, elemIsEscaped, w, r)
 										default:
@@ -1139,93 +1298,18 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										return
 									}
 
-									elem = origElem
-								case 'u': // Prefix: "urvey"
-									origElem := elem
-									if l := len("urvey"); len(elem) >= l && elem[0:l] == "urvey" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										// Leaf node.
-										switch r.Method {
-										case "POST":
-											s.handleCreateSurveyRequest([1]string{
-												args[0],
-											}, elemIsEscaped, w, r)
-										default:
-											s.notAllowed(w, r, "POST")
-										}
-
-										return
-									}
-
-									elem = origElem
 								}
 
-								elem = origElem
-							case 't': // Prefix: "transfer"
-								origElem := elem
-								if l := len("transfer"); len(elem) >= l && elem[0:l] == "transfer" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									// Leaf node.
-									switch r.Method {
-									case "POST":
-										s.handleTransferCargoRequest([1]string{
-											args[0],
-										}, elemIsEscaped, w, r)
-									default:
-										s.notAllowed(w, r, "POST")
-									}
-
-									return
-								}
-
-								elem = origElem
-							case 'w': // Prefix: "warp"
-								origElem := elem
-								if l := len("warp"); len(elem) >= l && elem[0:l] == "warp" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									// Leaf node.
-									switch r.Method {
-									case "POST":
-										s.handleWarpShipRequest([1]string{
-											args[0],
-										}, elemIsEscaped, w, r)
-									default:
-										s.notAllowed(w, r, "POST")
-									}
-
-									return
-								}
-
-								elem = origElem
 							}
 
-							elem = origElem
 						}
 
-						elem = origElem
 					}
 
-					elem = origElem
 				}
 
-				elem = origElem
 			case 'r': // Prefix: "register"
-				origElem := elem
+
 				if l := len("register"); len(elem) >= l && elem[0:l] == "register" {
 					elem = elem[l:]
 				} else {
@@ -1244,9 +1328,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
-				elem = origElem
 			case 's': // Prefix: "systems"
-				origElem := elem
+
 				if l := len("systems"); len(elem) >= l && elem[0:l] == "systems" {
 					elem = elem[l:]
 				} else {
@@ -1265,7 +1348,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				switch elem[0] {
 				case '/': // Prefix: "/"
-					origElem := elem
+
 					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 						elem = elem[l:]
 					} else {
@@ -1295,7 +1378,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					}
 					switch elem[0] {
 					case '/': // Prefix: "/waypoints"
-						origElem := elem
+
 						if l := len("/waypoints"); len(elem) >= l && elem[0:l] == "/waypoints" {
 							elem = elem[l:]
 						} else {
@@ -1316,7 +1399,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						}
 						switch elem[0] {
 						case '/': // Prefix: "/"
-							origElem := elem
+
 							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 								elem = elem[l:]
 							} else {
@@ -1347,7 +1430,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							}
 							switch elem[0] {
 							case '/': // Prefix: "/"
-								origElem := elem
+
 								if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 									elem = elem[l:]
 								} else {
@@ -1359,7 +1442,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								}
 								switch elem[0] {
 								case 'c': // Prefix: "construction"
-									origElem := elem
+
 									if l := len("construction"); len(elem) >= l && elem[0:l] == "construction" {
 										elem = elem[l:]
 									} else {
@@ -1381,7 +1464,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									}
 									switch elem[0] {
 									case '/': // Prefix: "/supply"
-										origElem := elem
+
 										if l := len("/supply"); len(elem) >= l && elem[0:l] == "/supply" {
 											elem = elem[l:]
 										} else {
@@ -1403,12 +1486,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 											return
 										}
 
-										elem = origElem
 									}
 
-									elem = origElem
 								case 'j': // Prefix: "jump-gate"
-									origElem := elem
+
 									if l := len("jump-gate"); len(elem) >= l && elem[0:l] == "jump-gate" {
 										elem = elem[l:]
 									} else {
@@ -1430,9 +1511,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										return
 									}
 
-									elem = origElem
 								case 'm': // Prefix: "market"
-									origElem := elem
+
 									if l := len("market"); len(elem) >= l && elem[0:l] == "market" {
 										elem = elem[l:]
 									} else {
@@ -1454,9 +1534,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										return
 									}
 
-									elem = origElem
 								case 's': // Prefix: "shipyard"
-									origElem := elem
+
 									if l := len("shipyard"); len(elem) >= l && elem[0:l] == "shipyard" {
 										elem = elem[l:]
 									} else {
@@ -1478,25 +1557,18 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										return
 									}
 
-									elem = origElem
 								}
 
-								elem = origElem
 							}
 
-							elem = origElem
 						}
 
-						elem = origElem
 					}
 
-					elem = origElem
 				}
 
-				elem = origElem
 			}
 
-			elem = origElem
 		}
 	}
 	s.notFound(w, r)
@@ -1578,7 +1650,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 		}
 		switch elem[0] {
 		case '/': // Prefix: "/"
-			origElem := elem
+
 			if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 				elem = elem[l:]
 			} else {
@@ -1588,7 +1660,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 			if len(elem) == 0 {
 				switch method {
 				case "GET":
-					r.name = "GetStatus"
+					r.name = GetStatusOperation
 					r.summary = "Get Status"
 					r.operationID = "get-status"
 					r.pathPattern = "/"
@@ -1601,7 +1673,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 			}
 			switch elem[0] {
 			case 'a': // Prefix: "agents"
-				origElem := elem
+
 				if l := len("agents"); len(elem) >= l && elem[0:l] == "agents" {
 					elem = elem[l:]
 				} else {
@@ -1611,7 +1683,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				if len(elem) == 0 {
 					switch method {
 					case "GET":
-						r.name = "GetAgents"
+						r.name = GetAgentsOperation
 						r.summary = "List Agents"
 						r.operationID = "get-agents"
 						r.pathPattern = "/agents"
@@ -1624,7 +1696,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				}
 				switch elem[0] {
 				case '/': // Prefix: "/"
-					origElem := elem
+
 					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 						elem = elem[l:]
 					} else {
@@ -1632,15 +1704,19 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					}
 
 					// Param: "agentSymbol"
-					// Leaf parameter
+					// Leaf parameter, slashes are prohibited
+					idx := strings.IndexByte(elem, '/')
+					if idx >= 0 {
+						break
+					}
 					args[0] = elem
 					elem = ""
 
 					if len(elem) == 0 {
+						// Leaf node.
 						switch method {
 						case "GET":
-							// Leaf: GetAgent
-							r.name = "GetAgent"
+							r.name = GetAgentOperation
 							r.summary = "Get Public Agent"
 							r.operationID = "get-agent"
 							r.pathPattern = "/agents/{agentSymbol}"
@@ -1652,12 +1728,10 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						}
 					}
 
-					elem = origElem
 				}
 
-				elem = origElem
 			case 'f': // Prefix: "factions"
-				origElem := elem
+
 				if l := len("factions"); len(elem) >= l && elem[0:l] == "factions" {
 					elem = elem[l:]
 				} else {
@@ -1667,7 +1741,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				if len(elem) == 0 {
 					switch method {
 					case "GET":
-						r.name = "GetFactions"
+						r.name = GetFactionsOperation
 						r.summary = "List Factions"
 						r.operationID = "get-factions"
 						r.pathPattern = "/factions"
@@ -1680,7 +1754,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				}
 				switch elem[0] {
 				case '/': // Prefix: "/"
-					origElem := elem
+
 					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 						elem = elem[l:]
 					} else {
@@ -1688,15 +1762,19 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					}
 
 					// Param: "factionSymbol"
-					// Leaf parameter
+					// Leaf parameter, slashes are prohibited
+					idx := strings.IndexByte(elem, '/')
+					if idx >= 0 {
+						break
+					}
 					args[0] = elem
 					elem = ""
 
 					if len(elem) == 0 {
+						// Leaf node.
 						switch method {
 						case "GET":
-							// Leaf: GetFaction
-							r.name = "GetFaction"
+							r.name = GetFactionOperation
 							r.summary = "Get Faction"
 							r.operationID = "get-faction"
 							r.pathPattern = "/factions/{factionSymbol}"
@@ -1708,13 +1786,11 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						}
 					}
 
-					elem = origElem
 				}
 
-				elem = origElem
-			case 'm': // Prefix: "my/"
-				origElem := elem
-				if l := len("my/"); len(elem) >= l && elem[0:l] == "my/" {
+			case 'm': // Prefix: "m"
+
+				if l := len("m"); len(elem) >= l && elem[0:l] == "m" {
 					elem = elem[l:]
 				} else {
 					break
@@ -1724,22 +1800,22 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					break
 				}
 				switch elem[0] {
-				case 'a': // Prefix: "agent"
-					origElem := elem
-					if l := len("agent"); len(elem) >= l && elem[0:l] == "agent" {
+				case 'a': // Prefix: "arket/supply-chain"
+
+					if l := len("arket/supply-chain"); len(elem) >= l && elem[0:l] == "arket/supply-chain" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
 					if len(elem) == 0 {
+						// Leaf node.
 						switch method {
 						case "GET":
-							// Leaf: GetMyAgent
-							r.name = "GetMyAgent"
-							r.summary = "Get Agent"
-							r.operationID = "get-my-agent"
-							r.pathPattern = "/my/agent"
+							r.name = GetSupplyChainOperation
+							r.summary = "Get Supply Chain"
+							r.operationID = "get-supply-chain"
+							r.pathPattern = "/market/supply-chain"
 							r.args = args
 							r.count = 0
 							return r, true
@@ -1748,56 +1824,59 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						}
 					}
 
-					elem = origElem
-				case 'c': // Prefix: "contracts"
-					origElem := elem
-					if l := len("contracts"); len(elem) >= l && elem[0:l] == "contracts" {
+				case 'y': // Prefix: "y/"
+
+					if l := len("y/"); len(elem) >= l && elem[0:l] == "y/" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
 					if len(elem) == 0 {
-						switch method {
-						case "GET":
-							r.name = "GetContracts"
-							r.summary = "List Contracts"
-							r.operationID = "get-contracts"
-							r.pathPattern = "/my/contracts"
-							r.args = args
-							r.count = 0
-							return r, true
-						default:
-							return
-						}
+						break
 					}
 					switch elem[0] {
-					case '/': // Prefix: "/"
-						origElem := elem
-						if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+					case 'a': // Prefix: "agent"
+
+						if l := len("agent"); len(elem) >= l && elem[0:l] == "agent" {
 							elem = elem[l:]
 						} else {
 							break
 						}
 
-						// Param: "contractId"
-						// Match until "/"
-						idx := strings.IndexByte(elem, '/')
-						if idx < 0 {
-							idx = len(elem)
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "GET":
+								r.name = GetMyAgentOperation
+								r.summary = "Get Agent"
+								r.operationID = "get-my-agent"
+								r.pathPattern = "/my/agent"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
 						}
-						args[0] = elem[:idx]
-						elem = elem[idx:]
+
+					case 'c': // Prefix: "contracts"
+
+						if l := len("contracts"); len(elem) >= l && elem[0:l] == "contracts" {
+							elem = elem[l:]
+						} else {
+							break
+						}
 
 						if len(elem) == 0 {
 							switch method {
 							case "GET":
-								r.name = "GetContract"
-								r.summary = "Get Contract"
-								r.operationID = "get-contract"
-								r.pathPattern = "/my/contracts/{contractId}"
+								r.name = GetContractsOperation
+								r.summary = "List Contracts"
+								r.operationID = "get-contracts"
+								r.pathPattern = "/my/contracts"
 								r.args = args
-								r.count = 1
+								r.count = 0
 								return r, true
 							default:
 								return
@@ -1805,158 +1884,152 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						}
 						switch elem[0] {
 						case '/': // Prefix: "/"
-							origElem := elem
+
 							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 								elem = elem[l:]
 							} else {
 								break
 							}
 
+							// Param: "contractId"
+							// Match until "/"
+							idx := strings.IndexByte(elem, '/')
+							if idx < 0 {
+								idx = len(elem)
+							}
+							args[0] = elem[:idx]
+							elem = elem[idx:]
+
 							if len(elem) == 0 {
-								break
+								switch method {
+								case "GET":
+									r.name = GetContractOperation
+									r.summary = "Get Contract"
+									r.operationID = "get-contract"
+									r.pathPattern = "/my/contracts/{contractId}"
+									r.args = args
+									r.count = 1
+									return r, true
+								default:
+									return
+								}
 							}
 							switch elem[0] {
-							case 'a': // Prefix: "accept"
-								origElem := elem
-								if l := len("accept"); len(elem) >= l && elem[0:l] == "accept" {
+							case '/': // Prefix: "/"
+
+								if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 									elem = elem[l:]
 								} else {
 									break
 								}
 
 								if len(elem) == 0 {
-									switch method {
-									case "POST":
-										// Leaf: AcceptContract
-										r.name = "AcceptContract"
-										r.summary = "Accept Contract"
-										r.operationID = "accept-contract"
-										r.pathPattern = "/my/contracts/{contractId}/accept"
-										r.args = args
-										r.count = 1
-										return r, true
-									default:
-										return
-									}
-								}
-
-								elem = origElem
-							case 'd': // Prefix: "deliver"
-								origElem := elem
-								if l := len("deliver"); len(elem) >= l && elem[0:l] == "deliver" {
-									elem = elem[l:]
-								} else {
 									break
 								}
+								switch elem[0] {
+								case 'a': // Prefix: "accept"
 
-								if len(elem) == 0 {
-									switch method {
-									case "POST":
-										// Leaf: DeliverContract
-										r.name = "DeliverContract"
-										r.summary = "Deliver Cargo to Contract"
-										r.operationID = "deliver-contract"
-										r.pathPattern = "/my/contracts/{contractId}/deliver"
-										r.args = args
-										r.count = 1
-										return r, true
-									default:
-										return
+									if l := len("accept"); len(elem) >= l && elem[0:l] == "accept" {
+										elem = elem[l:]
+									} else {
+										break
 									}
-								}
 
-								elem = origElem
-							case 'f': // Prefix: "fulfill"
-								origElem := elem
-								if l := len("fulfill"); len(elem) >= l && elem[0:l] == "fulfill" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									switch method {
-									case "POST":
-										// Leaf: FulfillContract
-										r.name = "FulfillContract"
-										r.summary = "Fulfill Contract"
-										r.operationID = "fulfill-contract"
-										r.pathPattern = "/my/contracts/{contractId}/fulfill"
-										r.args = args
-										r.count = 1
-										return r, true
-									default:
-										return
+									if len(elem) == 0 {
+										// Leaf node.
+										switch method {
+										case "POST":
+											r.name = AcceptContractOperation
+											r.summary = "Accept Contract"
+											r.operationID = "accept-contract"
+											r.pathPattern = "/my/contracts/{contractId}/accept"
+											r.args = args
+											r.count = 1
+											return r, true
+										default:
+											return
+										}
 									}
+
+								case 'd': // Prefix: "deliver"
+
+									if l := len("deliver"); len(elem) >= l && elem[0:l] == "deliver" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
+										switch method {
+										case "POST":
+											r.name = DeliverContractOperation
+											r.summary = "Deliver Cargo to Contract"
+											r.operationID = "deliver-contract"
+											r.pathPattern = "/my/contracts/{contractId}/deliver"
+											r.args = args
+											r.count = 1
+											return r, true
+										default:
+											return
+										}
+									}
+
+								case 'f': // Prefix: "fulfill"
+
+									if l := len("fulfill"); len(elem) >= l && elem[0:l] == "fulfill" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
+										switch method {
+										case "POST":
+											r.name = FulfillContractOperation
+											r.summary = "Fulfill Contract"
+											r.operationID = "fulfill-contract"
+											r.pathPattern = "/my/contracts/{contractId}/fulfill"
+											r.args = args
+											r.count = 1
+											return r, true
+										default:
+											return
+										}
+									}
+
 								}
 
-								elem = origElem
 							}
 
-							elem = origElem
 						}
 
-						elem = origElem
-					}
+					case 's': // Prefix: "ships"
 
-					elem = origElem
-				case 's': // Prefix: "ships"
-					origElem := elem
-					if l := len("ships"); len(elem) >= l && elem[0:l] == "ships" {
-						elem = elem[l:]
-					} else {
-						break
-					}
-
-					if len(elem) == 0 {
-						switch method {
-						case "GET":
-							r.name = "GetMyShips"
-							r.summary = "List Ships"
-							r.operationID = "get-my-ships"
-							r.pathPattern = "/my/ships"
-							r.args = args
-							r.count = 0
-							return r, true
-						case "POST":
-							r.name = "PurchaseShip"
-							r.summary = "Purchase Ship"
-							r.operationID = "purchase-ship"
-							r.pathPattern = "/my/ships"
-							r.args = args
-							r.count = 0
-							return r, true
-						default:
-							return
-						}
-					}
-					switch elem[0] {
-					case '/': // Prefix: "/"
-						origElem := elem
-						if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+						if l := len("ships"); len(elem) >= l && elem[0:l] == "ships" {
 							elem = elem[l:]
 						} else {
 							break
 						}
 
-						// Param: "shipSymbol"
-						// Match until "/"
-						idx := strings.IndexByte(elem, '/')
-						if idx < 0 {
-							idx = len(elem)
-						}
-						args[0] = elem[:idx]
-						elem = elem[idx:]
-
 						if len(elem) == 0 {
 							switch method {
 							case "GET":
-								r.name = "GetMyShip"
-								r.summary = "Get Ship"
-								r.operationID = "get-my-ship"
-								r.pathPattern = "/my/ships/{shipSymbol}"
+								r.name = GetMyShipsOperation
+								r.summary = "List Ships"
+								r.operationID = "get-my-ships"
+								r.pathPattern = "/my/ships"
 								r.args = args
-								r.count = 1
+								r.count = 0
+								return r, true
+							case "POST":
+								r.name = PurchaseShipOperation
+								r.summary = "Purchase Ship"
+								r.operationID = "purchase-ship"
+								r.pathPattern = "/my/ships"
+								r.args = args
+								r.count = 0
 								return r, true
 							default:
 								return
@@ -1964,605 +2037,40 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						}
 						switch elem[0] {
 						case '/': // Prefix: "/"
-							origElem := elem
+
 							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 								elem = elem[l:]
 							} else {
 								break
 							}
 
+							// Param: "shipSymbol"
+							// Match until "/"
+							idx := strings.IndexByte(elem, '/')
+							if idx < 0 {
+								idx = len(elem)
+							}
+							args[0] = elem[:idx]
+							elem = elem[idx:]
+
 							if len(elem) == 0 {
-								break
+								switch method {
+								case "GET":
+									r.name = GetMyShipOperation
+									r.summary = "Get Ship"
+									r.operationID = "get-my-ship"
+									r.pathPattern = "/my/ships/{shipSymbol}"
+									r.args = args
+									r.count = 1
+									return r, true
+								default:
+									return
+								}
 							}
 							switch elem[0] {
-							case 'c': // Prefix: "c"
-								origElem := elem
-								if l := len("c"); len(elem) >= l && elem[0:l] == "c" {
-									elem = elem[l:]
-								} else {
-									break
-								}
+							case '/': // Prefix: "/"
 
-								if len(elem) == 0 {
-									break
-								}
-								switch elem[0] {
-								case 'a': // Prefix: "argo"
-									origElem := elem
-									if l := len("argo"); len(elem) >= l && elem[0:l] == "argo" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										switch method {
-										case "GET":
-											// Leaf: GetMyShipCargo
-											r.name = "GetMyShipCargo"
-											r.summary = "Get Ship Cargo"
-											r.operationID = "get-my-ship-cargo"
-											r.pathPattern = "/my/ships/{shipSymbol}/cargo"
-											r.args = args
-											r.count = 1
-											return r, true
-										default:
-											return
-										}
-									}
-
-									elem = origElem
-								case 'h': // Prefix: "hart"
-									origElem := elem
-									if l := len("hart"); len(elem) >= l && elem[0:l] == "hart" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										switch method {
-										case "POST":
-											// Leaf: CreateChart
-											r.name = "CreateChart"
-											r.summary = "Create Chart"
-											r.operationID = "create-chart"
-											r.pathPattern = "/my/ships/{shipSymbol}/chart"
-											r.args = args
-											r.count = 1
-											return r, true
-										default:
-											return
-										}
-									}
-
-									elem = origElem
-								case 'o': // Prefix: "ooldown"
-									origElem := elem
-									if l := len("ooldown"); len(elem) >= l && elem[0:l] == "ooldown" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										switch method {
-										case "GET":
-											// Leaf: GetShipCooldown
-											r.name = "GetShipCooldown"
-											r.summary = "Get Ship Cooldown"
-											r.operationID = "get-ship-cooldown"
-											r.pathPattern = "/my/ships/{shipSymbol}/cooldown"
-											r.args = args
-											r.count = 1
-											return r, true
-										default:
-											return
-										}
-									}
-
-									elem = origElem
-								}
-
-								elem = origElem
-							case 'd': // Prefix: "dock"
-								origElem := elem
-								if l := len("dock"); len(elem) >= l && elem[0:l] == "dock" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									switch method {
-									case "POST":
-										// Leaf: DockShip
-										r.name = "DockShip"
-										r.summary = "Dock Ship"
-										r.operationID = "dock-ship"
-										r.pathPattern = "/my/ships/{shipSymbol}/dock"
-										r.args = args
-										r.count = 1
-										return r, true
-									default:
-										return
-									}
-								}
-
-								elem = origElem
-							case 'e': // Prefix: "extract"
-								origElem := elem
-								if l := len("extract"); len(elem) >= l && elem[0:l] == "extract" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									switch method {
-									case "POST":
-										r.name = "ExtractResources"
-										r.summary = "Extract Resources"
-										r.operationID = "extract-resources"
-										r.pathPattern = "/my/ships/{shipSymbol}/extract"
-										r.args = args
-										r.count = 1
-										return r, true
-									default:
-										return
-									}
-								}
-								switch elem[0] {
-								case '/': // Prefix: "/survey"
-									origElem := elem
-									if l := len("/survey"); len(elem) >= l && elem[0:l] == "/survey" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										switch method {
-										case "POST":
-											// Leaf: ExtractResourcesWithSurvey
-											r.name = "ExtractResourcesWithSurvey"
-											r.summary = "Extract Resources with Survey"
-											r.operationID = "extract-resources-with-survey"
-											r.pathPattern = "/my/ships/{shipSymbol}/extract/survey"
-											r.args = args
-											r.count = 1
-											return r, true
-										default:
-											return
-										}
-									}
-
-									elem = origElem
-								}
-
-								elem = origElem
-							case 'j': // Prefix: "j"
-								origElem := elem
-								if l := len("j"); len(elem) >= l && elem[0:l] == "j" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									break
-								}
-								switch elem[0] {
-								case 'e': // Prefix: "ettison"
-									origElem := elem
-									if l := len("ettison"); len(elem) >= l && elem[0:l] == "ettison" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										switch method {
-										case "POST":
-											// Leaf: Jettison
-											r.name = "Jettison"
-											r.summary = "Jettison Cargo"
-											r.operationID = "jettison"
-											r.pathPattern = "/my/ships/{shipSymbol}/jettison"
-											r.args = args
-											r.count = 1
-											return r, true
-										default:
-											return
-										}
-									}
-
-									elem = origElem
-								case 'u': // Prefix: "ump"
-									origElem := elem
-									if l := len("ump"); len(elem) >= l && elem[0:l] == "ump" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										switch method {
-										case "POST":
-											// Leaf: JumpShip
-											r.name = "JumpShip"
-											r.summary = "Jump Ship"
-											r.operationID = "jump-ship"
-											r.pathPattern = "/my/ships/{shipSymbol}/jump"
-											r.args = args
-											r.count = 1
-											return r, true
-										default:
-											return
-										}
-									}
-
-									elem = origElem
-								}
-
-								elem = origElem
-							case 'm': // Prefix: "mounts"
-								origElem := elem
-								if l := len("mounts"); len(elem) >= l && elem[0:l] == "mounts" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									switch method {
-									case "GET":
-										r.name = "GetMounts"
-										r.summary = "Get Mounts"
-										r.operationID = "get-mounts"
-										r.pathPattern = "/my/ships/{shipSymbol}/mounts"
-										r.args = args
-										r.count = 1
-										return r, true
-									default:
-										return
-									}
-								}
-								switch elem[0] {
-								case '/': // Prefix: "/"
-									origElem := elem
-									if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										break
-									}
-									switch elem[0] {
-									case 'i': // Prefix: "install"
-										origElem := elem
-										if l := len("install"); len(elem) >= l && elem[0:l] == "install" {
-											elem = elem[l:]
-										} else {
-											break
-										}
-
-										if len(elem) == 0 {
-											switch method {
-											case "POST":
-												// Leaf: InstallMount
-												r.name = "InstallMount"
-												r.summary = "Install Mount"
-												r.operationID = "install-mount"
-												r.pathPattern = "/my/ships/{shipSymbol}/mounts/install"
-												r.args = args
-												r.count = 1
-												return r, true
-											default:
-												return
-											}
-										}
-
-										elem = origElem
-									case 'r': // Prefix: "remove"
-										origElem := elem
-										if l := len("remove"); len(elem) >= l && elem[0:l] == "remove" {
-											elem = elem[l:]
-										} else {
-											break
-										}
-
-										if len(elem) == 0 {
-											switch method {
-											case "POST":
-												// Leaf: RemoveMount
-												r.name = "RemoveMount"
-												r.summary = "Remove Mount"
-												r.operationID = "remove-mount"
-												r.pathPattern = "/my/ships/{shipSymbol}/mounts/remove"
-												r.args = args
-												r.count = 1
-												return r, true
-											default:
-												return
-											}
-										}
-
-										elem = origElem
-									}
-
-									elem = origElem
-								}
-
-								elem = origElem
-							case 'n': // Prefix: "n"
-								origElem := elem
-								if l := len("n"); len(elem) >= l && elem[0:l] == "n" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									break
-								}
-								switch elem[0] {
-								case 'a': // Prefix: "av"
-									origElem := elem
-									if l := len("av"); len(elem) >= l && elem[0:l] == "av" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										switch method {
-										case "GET":
-											r.name = "GetShipNav"
-											r.summary = "Get Ship Nav"
-											r.operationID = "get-ship-nav"
-											r.pathPattern = "/my/ships/{shipSymbol}/nav"
-											r.args = args
-											r.count = 1
-											return r, true
-										case "PATCH":
-											r.name = "PatchShipNav"
-											r.summary = "Patch Ship Nav"
-											r.operationID = "patch-ship-nav"
-											r.pathPattern = "/my/ships/{shipSymbol}/nav"
-											r.args = args
-											r.count = 1
-											return r, true
-										default:
-											return
-										}
-									}
-									switch elem[0] {
-									case 'i': // Prefix: "igate"
-										origElem := elem
-										if l := len("igate"); len(elem) >= l && elem[0:l] == "igate" {
-											elem = elem[l:]
-										} else {
-											break
-										}
-
-										if len(elem) == 0 {
-											switch method {
-											case "POST":
-												// Leaf: NavigateShip
-												r.name = "NavigateShip"
-												r.summary = "Navigate Ship"
-												r.operationID = "navigate-ship"
-												r.pathPattern = "/my/ships/{shipSymbol}/navigate"
-												r.args = args
-												r.count = 1
-												return r, true
-											default:
-												return
-											}
-										}
-
-										elem = origElem
-									}
-
-									elem = origElem
-								case 'e': // Prefix: "egotiate/contract"
-									origElem := elem
-									if l := len("egotiate/contract"); len(elem) >= l && elem[0:l] == "egotiate/contract" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										switch method {
-										case "POST":
-											// Leaf: NegotiateContract
-											r.name = "NegotiateContract"
-											r.summary = "Negotiate Contract"
-											r.operationID = "negotiateContract"
-											r.pathPattern = "/my/ships/{shipSymbol}/negotiate/contract"
-											r.args = args
-											r.count = 1
-											return r, true
-										default:
-											return
-										}
-									}
-
-									elem = origElem
-								}
-
-								elem = origElem
-							case 'o': // Prefix: "orbit"
-								origElem := elem
-								if l := len("orbit"); len(elem) >= l && elem[0:l] == "orbit" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									switch method {
-									case "POST":
-										// Leaf: OrbitShip
-										r.name = "OrbitShip"
-										r.summary = "Orbit Ship"
-										r.operationID = "orbit-ship"
-										r.pathPattern = "/my/ships/{shipSymbol}/orbit"
-										r.args = args
-										r.count = 1
-										return r, true
-									default:
-										return
-									}
-								}
-
-								elem = origElem
-							case 'p': // Prefix: "purchase"
-								origElem := elem
-								if l := len("purchase"); len(elem) >= l && elem[0:l] == "purchase" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									switch method {
-									case "POST":
-										// Leaf: PurchaseCargo
-										r.name = "PurchaseCargo"
-										r.summary = "Purchase Cargo"
-										r.operationID = "purchase-cargo"
-										r.pathPattern = "/my/ships/{shipSymbol}/purchase"
-										r.args = args
-										r.count = 1
-										return r, true
-									default:
-										return
-									}
-								}
-
-								elem = origElem
-							case 'r': // Prefix: "re"
-								origElem := elem
-								if l := len("re"); len(elem) >= l && elem[0:l] == "re" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									break
-								}
-								switch elem[0] {
-								case 'f': // Prefix: "f"
-									origElem := elem
-									if l := len("f"); len(elem) >= l && elem[0:l] == "f" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										break
-									}
-									switch elem[0] {
-									case 'i': // Prefix: "ine"
-										origElem := elem
-										if l := len("ine"); len(elem) >= l && elem[0:l] == "ine" {
-											elem = elem[l:]
-										} else {
-											break
-										}
-
-										if len(elem) == 0 {
-											switch method {
-											case "POST":
-												// Leaf: ShipRefine
-												r.name = "ShipRefine"
-												r.summary = "Ship Refine"
-												r.operationID = "ship-refine"
-												r.pathPattern = "/my/ships/{shipSymbol}/refine"
-												r.args = args
-												r.count = 1
-												return r, true
-											default:
-												return
-											}
-										}
-
-										elem = origElem
-									case 'u': // Prefix: "uel"
-										origElem := elem
-										if l := len("uel"); len(elem) >= l && elem[0:l] == "uel" {
-											elem = elem[l:]
-										} else {
-											break
-										}
-
-										if len(elem) == 0 {
-											switch method {
-											case "POST":
-												// Leaf: RefuelShip
-												r.name = "RefuelShip"
-												r.summary = "Refuel Ship"
-												r.operationID = "refuel-ship"
-												r.pathPattern = "/my/ships/{shipSymbol}/refuel"
-												r.args = args
-												r.count = 1
-												return r, true
-											default:
-												return
-											}
-										}
-
-										elem = origElem
-									}
-
-									elem = origElem
-								case 'p': // Prefix: "pair"
-									origElem := elem
-									if l := len("pair"); len(elem) >= l && elem[0:l] == "pair" {
-										elem = elem[l:]
-									} else {
-										break
-									}
-
-									if len(elem) == 0 {
-										switch method {
-										case "GET":
-											// Leaf: GetRepairShip
-											r.name = "GetRepairShip"
-											r.summary = "Get Repair Ship"
-											r.operationID = "get-repair-ship"
-											r.pathPattern = "/my/ships/{shipSymbol}/repair"
-											r.args = args
-											r.count = 1
-											return r, true
-										case "POST":
-											// Leaf: RepairShip
-											r.name = "RepairShip"
-											r.summary = "Repair Ship"
-											r.operationID = "repair-ship"
-											r.pathPattern = "/my/ships/{shipSymbol}/repair"
-											r.args = args
-											r.count = 1
-											return r, true
-										default:
-											return
-										}
-									}
-
-									elem = origElem
-								}
-
-								elem = origElem
-							case 's': // Prefix: "s"
-								origElem := elem
-								if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
+								if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 									elem = elem[l:]
 								} else {
 									break
@@ -2573,7 +2081,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								}
 								switch elem[0] {
 								case 'c': // Prefix: "c"
-									origElem := elem
+
 									if l := len("c"); len(elem) >= l && elem[0:l] == "c" {
 										elem = elem[l:]
 									} else {
@@ -2584,21 +2092,253 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										break
 									}
 									switch elem[0] {
-									case 'a': // Prefix: "an/"
-										origElem := elem
-										if l := len("an/"); len(elem) >= l && elem[0:l] == "an/" {
+									case 'a': // Prefix: "argo"
+
+										if l := len("argo"); len(elem) >= l && elem[0:l] == "argo" {
 											elem = elem[l:]
 										} else {
 											break
 										}
 
 										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "GET":
+												r.name = GetMyShipCargoOperation
+												r.summary = "Get Ship Cargo"
+												r.operationID = "get-my-ship-cargo"
+												r.pathPattern = "/my/ships/{shipSymbol}/cargo"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+
+									case 'h': // Prefix: "hart"
+
+										if l := len("hart"); len(elem) >= l && elem[0:l] == "hart" {
+											elem = elem[l:]
+										} else {
 											break
 										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "POST":
+												r.name = CreateChartOperation
+												r.summary = "Create Chart"
+												r.operationID = "create-chart"
+												r.pathPattern = "/my/ships/{shipSymbol}/chart"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+
+									case 'o': // Prefix: "ooldown"
+
+										if l := len("ooldown"); len(elem) >= l && elem[0:l] == "ooldown" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "GET":
+												r.name = GetShipCooldownOperation
+												r.summary = "Get Ship Cooldown"
+												r.operationID = "get-ship-cooldown"
+												r.pathPattern = "/my/ships/{shipSymbol}/cooldown"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+
+									}
+
+								case 'd': // Prefix: "dock"
+
+									if l := len("dock"); len(elem) >= l && elem[0:l] == "dock" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
+										switch method {
+										case "POST":
+											r.name = DockShipOperation
+											r.summary = "Dock Ship"
+											r.operationID = "dock-ship"
+											r.pathPattern = "/my/ships/{shipSymbol}/dock"
+											r.args = args
+											r.count = 1
+											return r, true
+										default:
+											return
+										}
+									}
+
+								case 'e': // Prefix: "extract"
+
+									if l := len("extract"); len(elem) >= l && elem[0:l] == "extract" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										switch method {
+										case "POST":
+											r.name = ExtractResourcesOperation
+											r.summary = "Extract Resources"
+											r.operationID = "extract-resources"
+											r.pathPattern = "/my/ships/{shipSymbol}/extract"
+											r.args = args
+											r.count = 1
+											return r, true
+										default:
+											return
+										}
+									}
+									switch elem[0] {
+									case '/': // Prefix: "/survey"
+
+										if l := len("/survey"); len(elem) >= l && elem[0:l] == "/survey" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "POST":
+												r.name = ExtractResourcesWithSurveyOperation
+												r.summary = "Extract Resources with Survey"
+												r.operationID = "extract-resources-with-survey"
+												r.pathPattern = "/my/ships/{shipSymbol}/extract/survey"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+
+									}
+
+								case 'j': // Prefix: "j"
+
+									if l := len("j"); len(elem) >= l && elem[0:l] == "j" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										break
+									}
+									switch elem[0] {
+									case 'e': // Prefix: "ettison"
+
+										if l := len("ettison"); len(elem) >= l && elem[0:l] == "ettison" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "POST":
+												r.name = JettisonOperation
+												r.summary = "Jettison Cargo"
+												r.operationID = "jettison"
+												r.pathPattern = "/my/ships/{shipSymbol}/jettison"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+
+									case 'u': // Prefix: "ump"
+
+										if l := len("ump"); len(elem) >= l && elem[0:l] == "ump" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "POST":
+												r.name = JumpShipOperation
+												r.summary = "Jump Ship"
+												r.operationID = "jump-ship"
+												r.pathPattern = "/my/ships/{shipSymbol}/jump"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+
+									}
+
+								case 'm': // Prefix: "mo"
+
+									if l := len("mo"); len(elem) >= l && elem[0:l] == "mo" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										break
+									}
+									switch elem[0] {
+									case 'd': // Prefix: "dules"
+
+										if l := len("dules"); len(elem) >= l && elem[0:l] == "dules" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											switch method {
+											case "GET":
+												r.name = GetShipModulesOperation
+												r.summary = "Get Ship Modules"
+												r.operationID = "get-ship-modules"
+												r.pathPattern = "/my/ships/{shipSymbol}/modules"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
 										switch elem[0] {
-										case 's': // Prefix: "s"
-											origElem := elem
-											if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
+										case '/': // Prefix: "/"
+
+											if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 												elem = elem[l:]
 											} else {
 												break
@@ -2608,22 +2348,22 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 												break
 											}
 											switch elem[0] {
-											case 'h': // Prefix: "hips"
-												origElem := elem
-												if l := len("hips"); len(elem) >= l && elem[0:l] == "hips" {
+											case 'i': // Prefix: "install"
+
+												if l := len("install"); len(elem) >= l && elem[0:l] == "install" {
 													elem = elem[l:]
 												} else {
 													break
 												}
 
 												if len(elem) == 0 {
+													// Leaf node.
 													switch method {
 													case "POST":
-														// Leaf: CreateShipShipScan
-														r.name = "CreateShipShipScan"
-														r.summary = "Scan Ships"
-														r.operationID = "create-ship-ship-scan"
-														r.pathPattern = "/my/ships/{shipSymbol}/scan/ships"
+														r.name = InstallShipModuleOperation
+														r.summary = "Install Ship Module"
+														r.operationID = "install-ship-module"
+														r.pathPattern = "/my/ships/{shipSymbol}/modules/install"
 														r.args = args
 														r.count = 1
 														return r, true
@@ -2632,23 +2372,22 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 													}
 												}
 
-												elem = origElem
-											case 'y': // Prefix: "ystems"
-												origElem := elem
-												if l := len("ystems"); len(elem) >= l && elem[0:l] == "ystems" {
+											case 'r': // Prefix: "remove"
+
+												if l := len("remove"); len(elem) >= l && elem[0:l] == "remove" {
 													elem = elem[l:]
 												} else {
 													break
 												}
 
 												if len(elem) == 0 {
+													// Leaf node.
 													switch method {
 													case "POST":
-														// Leaf: CreateShipSystemScan
-														r.name = "CreateShipSystemScan"
-														r.summary = "Scan Systems"
-														r.operationID = "create-ship-system-scan"
-														r.pathPattern = "/my/ships/{shipSymbol}/scan/systems"
+														r.name = RemoveShipModuleOperation
+														r.summary = "Remove Ship Module"
+														r.operationID = "remove-ship-module"
+														r.pathPattern = "/my/ships/{shipSymbol}/modules/remove"
 														r.args = args
 														r.count = 1
 														return r, true
@@ -2657,41 +2396,13 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 													}
 												}
 
-												elem = origElem
 											}
 
-											elem = origElem
-										case 'w': // Prefix: "waypoints"
-											origElem := elem
-											if l := len("waypoints"); len(elem) >= l && elem[0:l] == "waypoints" {
-												elem = elem[l:]
-											} else {
-												break
-											}
-
-											if len(elem) == 0 {
-												switch method {
-												case "POST":
-													// Leaf: CreateShipWaypointScan
-													r.name = "CreateShipWaypointScan"
-													r.summary = "Scan Waypoints"
-													r.operationID = "create-ship-waypoint-scan"
-													r.pathPattern = "/my/ships/{shipSymbol}/scan/waypoints"
-													r.args = args
-													r.count = 1
-													return r, true
-												default:
-													return
-												}
-											}
-
-											elem = origElem
 										}
 
-										elem = origElem
-									case 'r': // Prefix: "rap"
-										origElem := elem
-										if l := len("rap"); len(elem) >= l && elem[0:l] == "rap" {
+									case 'u': // Prefix: "unts"
+
+										if l := len("unts"); len(elem) >= l && elem[0:l] == "unts" {
 											elem = elem[l:]
 										} else {
 											break
@@ -2700,20 +2411,169 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										if len(elem) == 0 {
 											switch method {
 											case "GET":
-												// Leaf: GetScrapShip
-												r.name = "GetScrapShip"
-												r.summary = "Get Scrap Ship"
-												r.operationID = "get-scrap-ship"
-												r.pathPattern = "/my/ships/{shipSymbol}/scrap"
+												r.name = GetMountsOperation
+												r.summary = "Get Mounts"
+												r.operationID = "get-mounts"
+												r.pathPattern = "/my/ships/{shipSymbol}/mounts"
 												r.args = args
 												r.count = 1
 												return r, true
+											default:
+												return
+											}
+										}
+										switch elem[0] {
+										case '/': // Prefix: "/"
+
+											if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												break
+											}
+											switch elem[0] {
+											case 'i': // Prefix: "install"
+
+												if l := len("install"); len(elem) >= l && elem[0:l] == "install" {
+													elem = elem[l:]
+												} else {
+													break
+												}
+
+												if len(elem) == 0 {
+													// Leaf node.
+													switch method {
+													case "POST":
+														r.name = InstallMountOperation
+														r.summary = "Install Mount"
+														r.operationID = "install-mount"
+														r.pathPattern = "/my/ships/{shipSymbol}/mounts/install"
+														r.args = args
+														r.count = 1
+														return r, true
+													default:
+														return
+													}
+												}
+
+											case 'r': // Prefix: "remove"
+
+												if l := len("remove"); len(elem) >= l && elem[0:l] == "remove" {
+													elem = elem[l:]
+												} else {
+													break
+												}
+
+												if len(elem) == 0 {
+													// Leaf node.
+													switch method {
+													case "POST":
+														r.name = RemoveMountOperation
+														r.summary = "Remove Mount"
+														r.operationID = "remove-mount"
+														r.pathPattern = "/my/ships/{shipSymbol}/mounts/remove"
+														r.args = args
+														r.count = 1
+														return r, true
+													default:
+														return
+													}
+												}
+
+											}
+
+										}
+
+									}
+
+								case 'n': // Prefix: "n"
+
+									if l := len("n"); len(elem) >= l && elem[0:l] == "n" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										break
+									}
+									switch elem[0] {
+									case 'a': // Prefix: "av"
+
+										if l := len("av"); len(elem) >= l && elem[0:l] == "av" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											switch method {
+											case "GET":
+												r.name = GetShipNavOperation
+												r.summary = "Get Ship Nav"
+												r.operationID = "get-ship-nav"
+												r.pathPattern = "/my/ships/{shipSymbol}/nav"
+												r.args = args
+												r.count = 1
+												return r, true
+											case "PATCH":
+												r.name = PatchShipNavOperation
+												r.summary = "Patch Ship Nav"
+												r.operationID = "patch-ship-nav"
+												r.pathPattern = "/my/ships/{shipSymbol}/nav"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+										switch elem[0] {
+										case 'i': // Prefix: "igate"
+
+											if l := len("igate"); len(elem) >= l && elem[0:l] == "igate" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												// Leaf node.
+												switch method {
+												case "POST":
+													r.name = NavigateShipOperation
+													r.summary = "Navigate Ship"
+													r.operationID = "navigate-ship"
+													r.pathPattern = "/my/ships/{shipSymbol}/navigate"
+													r.args = args
+													r.count = 1
+													return r, true
+												default:
+													return
+												}
+											}
+
+										}
+
+									case 'e': // Prefix: "egotiate/contract"
+
+										if l := len("egotiate/contract"); len(elem) >= l && elem[0:l] == "egotiate/contract" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
 											case "POST":
-												// Leaf: ScrapShip
-												r.name = "ScrapShip"
-												r.summary = "Scrap Ship"
-												r.operationID = "scrap-ship"
-												r.pathPattern = "/my/ships/{shipSymbol}/scrap"
+												r.name = NegotiateContractOperation
+												r.summary = "Negotiate Contract"
+												r.operationID = "negotiateContract"
+												r.pathPattern = "/my/ships/{shipSymbol}/negotiate/contract"
 												r.args = args
 												r.count = 1
 												return r, true
@@ -2722,26 +2582,24 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											}
 										}
 
-										elem = origElem
 									}
 
-									elem = origElem
-								case 'e': // Prefix: "ell"
-									origElem := elem
-									if l := len("ell"); len(elem) >= l && elem[0:l] == "ell" {
+								case 'o': // Prefix: "orbit"
+
+									if l := len("orbit"); len(elem) >= l && elem[0:l] == "orbit" {
 										elem = elem[l:]
 									} else {
 										break
 									}
 
 									if len(elem) == 0 {
+										// Leaf node.
 										switch method {
 										case "POST":
-											// Leaf: SellCargo
-											r.name = "SellCargo"
-											r.summary = "Sell Cargo"
-											r.operationID = "sell-cargo"
-											r.pathPattern = "/my/ships/{shipSymbol}/sell"
+											r.name = OrbitShipOperation
+											r.summary = "Orbit Ship"
+											r.operationID = "orbit-ship"
+											r.pathPattern = "/my/ships/{shipSymbol}/orbit"
 											r.args = args
 											r.count = 1
 											return r, true
@@ -2750,23 +2608,22 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										}
 									}
 
-									elem = origElem
-								case 'i': // Prefix: "iphon"
-									origElem := elem
-									if l := len("iphon"); len(elem) >= l && elem[0:l] == "iphon" {
+								case 'p': // Prefix: "purchase"
+
+									if l := len("purchase"); len(elem) >= l && elem[0:l] == "purchase" {
 										elem = elem[l:]
 									} else {
 										break
 									}
 
 									if len(elem) == 0 {
+										// Leaf node.
 										switch method {
 										case "POST":
-											// Leaf: SiphonResources
-											r.name = "SiphonResources"
-											r.summary = "Siphon Resources"
-											r.operationID = "siphon-resources"
-											r.pathPattern = "/my/ships/{shipSymbol}/siphon"
+											r.name = PurchaseCargoOperation
+											r.summary = "Purchase Cargo"
+											r.operationID = "purchase-cargo"
+											r.pathPattern = "/my/ships/{shipSymbol}/purchase"
 											r.args = args
 											r.count = 1
 											return r, true
@@ -2775,23 +2632,362 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										}
 									}
 
-									elem = origElem
-								case 'u': // Prefix: "urvey"
-									origElem := elem
-									if l := len("urvey"); len(elem) >= l && elem[0:l] == "urvey" {
+								case 'r': // Prefix: "re"
+
+									if l := len("re"); len(elem) >= l && elem[0:l] == "re" {
 										elem = elem[l:]
 									} else {
 										break
 									}
 
 									if len(elem) == 0 {
+										break
+									}
+									switch elem[0] {
+									case 'f': // Prefix: "f"
+
+										if l := len("f"); len(elem) >= l && elem[0:l] == "f" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											break
+										}
+										switch elem[0] {
+										case 'i': // Prefix: "ine"
+
+											if l := len("ine"); len(elem) >= l && elem[0:l] == "ine" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												// Leaf node.
+												switch method {
+												case "POST":
+													r.name = ShipRefineOperation
+													r.summary = "Ship Refine"
+													r.operationID = "ship-refine"
+													r.pathPattern = "/my/ships/{shipSymbol}/refine"
+													r.args = args
+													r.count = 1
+													return r, true
+												default:
+													return
+												}
+											}
+
+										case 'u': // Prefix: "uel"
+
+											if l := len("uel"); len(elem) >= l && elem[0:l] == "uel" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												// Leaf node.
+												switch method {
+												case "POST":
+													r.name = RefuelShipOperation
+													r.summary = "Refuel Ship"
+													r.operationID = "refuel-ship"
+													r.pathPattern = "/my/ships/{shipSymbol}/refuel"
+													r.args = args
+													r.count = 1
+													return r, true
+												default:
+													return
+												}
+											}
+
+										}
+
+									case 'p': // Prefix: "pair"
+
+										if l := len("pair"); len(elem) >= l && elem[0:l] == "pair" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "GET":
+												r.name = GetRepairShipOperation
+												r.summary = "Get Repair Ship"
+												r.operationID = "get-repair-ship"
+												r.pathPattern = "/my/ships/{shipSymbol}/repair"
+												r.args = args
+												r.count = 1
+												return r, true
+											case "POST":
+												r.name = RepairShipOperation
+												r.summary = "Repair Ship"
+												r.operationID = "repair-ship"
+												r.pathPattern = "/my/ships/{shipSymbol}/repair"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+
+									}
+
+								case 's': // Prefix: "s"
+
+									if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										break
+									}
+									switch elem[0] {
+									case 'c': // Prefix: "c"
+
+										if l := len("c"); len(elem) >= l && elem[0:l] == "c" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											break
+										}
+										switch elem[0] {
+										case 'a': // Prefix: "an/"
+
+											if l := len("an/"); len(elem) >= l && elem[0:l] == "an/" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												break
+											}
+											switch elem[0] {
+											case 's': // Prefix: "s"
+
+												if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
+													elem = elem[l:]
+												} else {
+													break
+												}
+
+												if len(elem) == 0 {
+													break
+												}
+												switch elem[0] {
+												case 'h': // Prefix: "hips"
+
+													if l := len("hips"); len(elem) >= l && elem[0:l] == "hips" {
+														elem = elem[l:]
+													} else {
+														break
+													}
+
+													if len(elem) == 0 {
+														// Leaf node.
+														switch method {
+														case "POST":
+															r.name = CreateShipShipScanOperation
+															r.summary = "Scan Ships"
+															r.operationID = "create-ship-ship-scan"
+															r.pathPattern = "/my/ships/{shipSymbol}/scan/ships"
+															r.args = args
+															r.count = 1
+															return r, true
+														default:
+															return
+														}
+													}
+
+												case 'y': // Prefix: "ystems"
+
+													if l := len("ystems"); len(elem) >= l && elem[0:l] == "ystems" {
+														elem = elem[l:]
+													} else {
+														break
+													}
+
+													if len(elem) == 0 {
+														// Leaf node.
+														switch method {
+														case "POST":
+															r.name = CreateShipSystemScanOperation
+															r.summary = "Scan Systems"
+															r.operationID = "create-ship-system-scan"
+															r.pathPattern = "/my/ships/{shipSymbol}/scan/systems"
+															r.args = args
+															r.count = 1
+															return r, true
+														default:
+															return
+														}
+													}
+
+												}
+
+											case 'w': // Prefix: "waypoints"
+
+												if l := len("waypoints"); len(elem) >= l && elem[0:l] == "waypoints" {
+													elem = elem[l:]
+												} else {
+													break
+												}
+
+												if len(elem) == 0 {
+													// Leaf node.
+													switch method {
+													case "POST":
+														r.name = CreateShipWaypointScanOperation
+														r.summary = "Scan Waypoints"
+														r.operationID = "create-ship-waypoint-scan"
+														r.pathPattern = "/my/ships/{shipSymbol}/scan/waypoints"
+														r.args = args
+														r.count = 1
+														return r, true
+													default:
+														return
+													}
+												}
+
+											}
+
+										case 'r': // Prefix: "rap"
+
+											if l := len("rap"); len(elem) >= l && elem[0:l] == "rap" {
+												elem = elem[l:]
+											} else {
+												break
+											}
+
+											if len(elem) == 0 {
+												// Leaf node.
+												switch method {
+												case "GET":
+													r.name = GetScrapShipOperation
+													r.summary = "Get Scrap Ship"
+													r.operationID = "get-scrap-ship"
+													r.pathPattern = "/my/ships/{shipSymbol}/scrap"
+													r.args = args
+													r.count = 1
+													return r, true
+												case "POST":
+													r.name = ScrapShipOperation
+													r.summary = "Scrap Ship"
+													r.operationID = "scrap-ship"
+													r.pathPattern = "/my/ships/{shipSymbol}/scrap"
+													r.args = args
+													r.count = 1
+													return r, true
+												default:
+													return
+												}
+											}
+
+										}
+
+									case 'e': // Prefix: "ell"
+
+										if l := len("ell"); len(elem) >= l && elem[0:l] == "ell" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "POST":
+												r.name = SellCargoOperation
+												r.summary = "Sell Cargo"
+												r.operationID = "sell-cargo"
+												r.pathPattern = "/my/ships/{shipSymbol}/sell"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+
+									case 'i': // Prefix: "iphon"
+
+										if l := len("iphon"); len(elem) >= l && elem[0:l] == "iphon" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "POST":
+												r.name = SiphonResourcesOperation
+												r.summary = "Siphon Resources"
+												r.operationID = "siphon-resources"
+												r.pathPattern = "/my/ships/{shipSymbol}/siphon"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+
+									case 'u': // Prefix: "urvey"
+
+										if l := len("urvey"); len(elem) >= l && elem[0:l] == "urvey" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "POST":
+												r.name = CreateSurveyOperation
+												r.summary = "Create Survey"
+												r.operationID = "create-survey"
+												r.pathPattern = "/my/ships/{shipSymbol}/survey"
+												r.args = args
+												r.count = 1
+												return r, true
+											default:
+												return
+											}
+										}
+
+									}
+
+								case 't': // Prefix: "transfer"
+
+									if l := len("transfer"); len(elem) >= l && elem[0:l] == "transfer" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
 										switch method {
 										case "POST":
-											// Leaf: CreateSurvey
-											r.name = "CreateSurvey"
-											r.summary = "Create Survey"
-											r.operationID = "create-survey"
-											r.pathPattern = "/my/ships/{shipSymbol}/survey"
+											r.name = TransferCargoOperation
+											r.summary = "Transfer Cargo"
+											r.operationID = "transfer-cargo"
+											r.pathPattern = "/my/ships/{shipSymbol}/transfer"
 											r.args = args
 											r.count = 1
 											return r, true
@@ -2800,74 +2996,42 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										}
 									}
 
-									elem = origElem
-								}
+								case 'w': // Prefix: "warp"
 
-								elem = origElem
-							case 't': // Prefix: "transfer"
-								origElem := elem
-								if l := len("transfer"); len(elem) >= l && elem[0:l] == "transfer" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									switch method {
-									case "POST":
-										// Leaf: TransferCargo
-										r.name = "TransferCargo"
-										r.summary = "Transfer Cargo"
-										r.operationID = "transfer-cargo"
-										r.pathPattern = "/my/ships/{shipSymbol}/transfer"
-										r.args = args
-										r.count = 1
-										return r, true
-									default:
-										return
+									if l := len("warp"); len(elem) >= l && elem[0:l] == "warp" {
+										elem = elem[l:]
+									} else {
+										break
 									}
-								}
 
-								elem = origElem
-							case 'w': // Prefix: "warp"
-								origElem := elem
-								if l := len("warp"); len(elem) >= l && elem[0:l] == "warp" {
-									elem = elem[l:]
-								} else {
-									break
-								}
-
-								if len(elem) == 0 {
-									switch method {
-									case "POST":
-										// Leaf: WarpShip
-										r.name = "WarpShip"
-										r.summary = "Warp Ship"
-										r.operationID = "warp-ship"
-										r.pathPattern = "/my/ships/{shipSymbol}/warp"
-										r.args = args
-										r.count = 1
-										return r, true
-									default:
-										return
+									if len(elem) == 0 {
+										// Leaf node.
+										switch method {
+										case "POST":
+											r.name = WarpShipOperation
+											r.summary = "Warp Ship"
+											r.operationID = "warp-ship"
+											r.pathPattern = "/my/ships/{shipSymbol}/warp"
+											r.args = args
+											r.count = 1
+											return r, true
+										default:
+											return
+										}
 									}
+
 								}
 
-								elem = origElem
 							}
 
-							elem = origElem
 						}
 
-						elem = origElem
 					}
 
-					elem = origElem
 				}
 
-				elem = origElem
 			case 'r': // Prefix: "register"
-				origElem := elem
+
 				if l := len("register"); len(elem) >= l && elem[0:l] == "register" {
 					elem = elem[l:]
 				} else {
@@ -2875,10 +3039,10 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				}
 
 				if len(elem) == 0 {
+					// Leaf node.
 					switch method {
 					case "POST":
-						// Leaf: Register
-						r.name = "Register"
+						r.name = RegisterOperation
 						r.summary = "Register New Agent"
 						r.operationID = "register"
 						r.pathPattern = "/register"
@@ -2890,9 +3054,8 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					}
 				}
 
-				elem = origElem
 			case 's': // Prefix: "systems"
-				origElem := elem
+
 				if l := len("systems"); len(elem) >= l && elem[0:l] == "systems" {
 					elem = elem[l:]
 				} else {
@@ -2902,7 +3065,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				if len(elem) == 0 {
 					switch method {
 					case "GET":
-						r.name = "GetSystems"
+						r.name = GetSystemsOperation
 						r.summary = "List Systems"
 						r.operationID = "get-systems"
 						r.pathPattern = "/systems"
@@ -2915,7 +3078,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				}
 				switch elem[0] {
 				case '/': // Prefix: "/"
-					origElem := elem
+
 					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 						elem = elem[l:]
 					} else {
@@ -2934,7 +3097,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					if len(elem) == 0 {
 						switch method {
 						case "GET":
-							r.name = "GetSystem"
+							r.name = GetSystemOperation
 							r.summary = "Get System"
 							r.operationID = "get-system"
 							r.pathPattern = "/systems/{systemSymbol}"
@@ -2947,7 +3110,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					}
 					switch elem[0] {
 					case '/': // Prefix: "/waypoints"
-						origElem := elem
+
 						if l := len("/waypoints"); len(elem) >= l && elem[0:l] == "/waypoints" {
 							elem = elem[l:]
 						} else {
@@ -2957,7 +3120,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						if len(elem) == 0 {
 							switch method {
 							case "GET":
-								r.name = "GetSystemWaypoints"
+								r.name = GetSystemWaypointsOperation
 								r.summary = "List Waypoints in System"
 								r.operationID = "get-system-waypoints"
 								r.pathPattern = "/systems/{systemSymbol}/waypoints"
@@ -2970,7 +3133,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						}
 						switch elem[0] {
 						case '/': // Prefix: "/"
-							origElem := elem
+
 							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 								elem = elem[l:]
 							} else {
@@ -2989,7 +3152,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							if len(elem) == 0 {
 								switch method {
 								case "GET":
-									r.name = "GetWaypoint"
+									r.name = GetWaypointOperation
 									r.summary = "Get Waypoint"
 									r.operationID = "get-waypoint"
 									r.pathPattern = "/systems/{systemSymbol}/waypoints/{waypointSymbol}"
@@ -3002,7 +3165,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							}
 							switch elem[0] {
 							case '/': // Prefix: "/"
-								origElem := elem
+
 								if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 									elem = elem[l:]
 								} else {
@@ -3014,7 +3177,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								}
 								switch elem[0] {
 								case 'c': // Prefix: "construction"
-									origElem := elem
+
 									if l := len("construction"); len(elem) >= l && elem[0:l] == "construction" {
 										elem = elem[l:]
 									} else {
@@ -3024,7 +3187,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									if len(elem) == 0 {
 										switch method {
 										case "GET":
-											r.name = "GetConstruction"
+											r.name = GetConstructionOperation
 											r.summary = "Get Construction Site"
 											r.operationID = "get-construction"
 											r.pathPattern = "/systems/{systemSymbol}/waypoints/{waypointSymbol}/construction"
@@ -3037,7 +3200,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									}
 									switch elem[0] {
 									case '/': // Prefix: "/supply"
-										origElem := elem
+
 										if l := len("/supply"); len(elem) >= l && elem[0:l] == "/supply" {
 											elem = elem[l:]
 										} else {
@@ -3045,10 +3208,10 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										}
 
 										if len(elem) == 0 {
+											// Leaf node.
 											switch method {
 											case "POST":
-												// Leaf: SupplyConstruction
-												r.name = "SupplyConstruction"
+												r.name = SupplyConstructionOperation
 												r.summary = "Supply Construction Site"
 												r.operationID = "supply-construction"
 												r.pathPattern = "/systems/{systemSymbol}/waypoints/{waypointSymbol}/construction/supply"
@@ -3060,12 +3223,10 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											}
 										}
 
-										elem = origElem
 									}
 
-									elem = origElem
 								case 'j': // Prefix: "jump-gate"
-									origElem := elem
+
 									if l := len("jump-gate"); len(elem) >= l && elem[0:l] == "jump-gate" {
 										elem = elem[l:]
 									} else {
@@ -3073,10 +3234,10 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									}
 
 									if len(elem) == 0 {
+										// Leaf node.
 										switch method {
 										case "GET":
-											// Leaf: GetJumpGate
-											r.name = "GetJumpGate"
+											r.name = GetJumpGateOperation
 											r.summary = "Get Jump Gate"
 											r.operationID = "get-jump-gate"
 											r.pathPattern = "/systems/{systemSymbol}/waypoints/{waypointSymbol}/jump-gate"
@@ -3088,9 +3249,8 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										}
 									}
 
-									elem = origElem
 								case 'm': // Prefix: "market"
-									origElem := elem
+
 									if l := len("market"); len(elem) >= l && elem[0:l] == "market" {
 										elem = elem[l:]
 									} else {
@@ -3098,10 +3258,10 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									}
 
 									if len(elem) == 0 {
+										// Leaf node.
 										switch method {
 										case "GET":
-											// Leaf: GetMarket
-											r.name = "GetMarket"
+											r.name = GetMarketOperation
 											r.summary = "Get Market"
 											r.operationID = "get-market"
 											r.pathPattern = "/systems/{systemSymbol}/waypoints/{waypointSymbol}/market"
@@ -3113,9 +3273,8 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										}
 									}
 
-									elem = origElem
 								case 's': // Prefix: "shipyard"
-									origElem := elem
+
 									if l := len("shipyard"); len(elem) >= l && elem[0:l] == "shipyard" {
 										elem = elem[l:]
 									} else {
@@ -3123,10 +3282,10 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									}
 
 									if len(elem) == 0 {
+										// Leaf node.
 										switch method {
 										case "GET":
-											// Leaf: GetShipyard
-											r.name = "GetShipyard"
+											r.name = GetShipyardOperation
 											r.summary = "Get Shipyard"
 											r.operationID = "get-shipyard"
 											r.pathPattern = "/systems/{systemSymbol}/waypoints/{waypointSymbol}/shipyard"
@@ -3138,25 +3297,18 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										}
 									}
 
-									elem = origElem
 								}
 
-								elem = origElem
 							}
 
-							elem = origElem
 						}
 
-						elem = origElem
 					}
 
-					elem = origElem
 				}
 
-				elem = origElem
 			}
 
-			elem = origElem
 		}
 	}
 	return r, false

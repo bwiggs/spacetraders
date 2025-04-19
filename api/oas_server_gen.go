@@ -229,6 +229,12 @@ type Handler interface {
 	//
 	// GET /my/ships/{shipSymbol}/cooldown
 	GetShipCooldown(ctx context.Context, params GetShipCooldownParams) (GetShipCooldownRes, error)
+	// GetShipModules implements get-ship-modules operation.
+	//
+	// Get the modules installed on a ship.
+	//
+	// GET /my/ships/{shipSymbol}/modules
+	GetShipModules(ctx context.Context, params GetShipModulesParams) (*GetShipModulesOK, error)
 	// GetShipNav implements get-ship-nav operation.
 	//
 	// Get the current nav status of a ship.
@@ -251,6 +257,12 @@ type Handler interface {
 	//
 	// GET /
 	GetStatus(ctx context.Context) (*GetStatusOK, error)
+	// GetSupplyChain implements get-supply-chain operation.
+	//
+	// Describes which import and exports map to each other.
+	//
+	// GET /market/supply-chain
+	GetSupplyChain(ctx context.Context) (*GetSupplyChainOK, error)
 	// GetSystem implements get-system operation.
 	//
 	// Get the details of a system.
@@ -286,6 +298,12 @@ type Handler interface {
 	//
 	// POST /my/ships/{shipSymbol}/mounts/install
 	InstallMount(ctx context.Context, req OptInstallMountReq, params InstallMountParams) (*InstallMountCreated, error)
+	// InstallShipModule implements install-ship-module operation.
+	//
+	// Install a module on a ship. The module must be in your cargo.
+	//
+	// POST /my/ships/{shipSymbol}/modules/install
+	InstallShipModule(ctx context.Context, req OptInstallShipModuleReq, params InstallShipModuleParams) (*InstallShipModuleCreated, error)
 	// Jettison implements jettison operation.
 	//
 	// Jettison cargo from your ship's cargo hold.
@@ -385,16 +403,16 @@ type Handler interface {
 	// This new agent will be tied to a starting faction of your choice, which determines your starting
 	// location, and will be granted an authorization token, a contract with their starting faction, a
 	// command ship that can fly across space with advanced capabilities, a small probe ship that can be
-	// used for reconnaissance, and 150,000 credits.
+	// used for reconnaissance, and 175,000 credits.
 	// > #### Keep your token safe and secure
 	// >
-	// > Save your token during the alpha phase. There is no way to regenerate this token without
-	// starting a new agent. In the future you will be able to generate and manage your tokens from the
-	// SpaceTraders website.
+	// > Keep careful track of where you store your token. You can generate a new token from our account
+	// dashboard, but if someone else gains access to your token they will be able to use it to make API
+	// requests on your behalf until the end of the reset.
 	// If you are new to SpaceTraders, It is recommended to register with the COSMIC faction, a faction
 	// that is well connected to the rest of the universe. After registering, you should try our
 	// interactive [quickstart guide](https://docs.spacetraders.io/quickstart/new-game) which will walk
-	// you through basic API requests in just a few minutes.
+	// you through a few basic API requests in just a few minutes.
 	//
 	// POST /register
 	Register(ctx context.Context, req OptRegisterReq) (*RegisterCreated, error)
@@ -407,6 +425,12 @@ type Handler interface {
 	//
 	// POST /my/ships/{shipSymbol}/mounts/remove
 	RemoveMount(ctx context.Context, req OptRemoveMountReq, params RemoveMountParams) (*RemoveMountCreated, error)
+	// RemoveShipModule implements remove-ship-module operation.
+	//
+	// Remove a module from a ship. The module will be placed in cargo.
+	//
+	// POST /my/ships/{shipSymbol}/modules/remove
+	RemoveShipModule(ctx context.Context, req OptRemoveShipModuleReq, params RemoveShipModuleParams) (*RemoveShipModuleCreated, error)
 	// RepairShip implements repair-ship operation.
 	//
 	// Repair a ship, restoring the ship to maximum condition. The ship must be docked at a waypoint that
@@ -435,13 +459,13 @@ type Handler interface {
 	// Attempt to refine the raw materials on your ship. The request will only succeed if your ship is
 	// capable of refining at the time of the request. In order to be able to refine, a ship must have
 	// goods that can be refined and have installed a `Refinery` module that can refine it.
-	// When refining, 30 basic goods will be converted into 10 processed goods.
+	// When refining, 100 basic goods will be converted into 10 processed goods.
 	//
 	// POST /my/ships/{shipSymbol}/refine
 	ShipRefine(ctx context.Context, req OptShipRefineReq, params ShipRefineParams) (*ShipRefineCreated, error)
 	// SiphonResources implements siphon-resources operation.
 	//
-	// Siphon gases, such as hydrocarbon, from gas giants.
+	// Siphon gases or other resources from gas giants.
 	// The ship must be in orbit to be able to siphon and must have siphon mounts and a gas processor
 	// installed.
 	//

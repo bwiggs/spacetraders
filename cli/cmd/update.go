@@ -53,6 +53,8 @@ var updateCmd = &cobra.Command{
 			err = tasks.ScanShipyard(client, r, target)
 		case "shipyards":
 			err = tasks.ScanShipyards(client, r, target)
+		case "systems":
+			err = tasks.UpdateSystems(client, r)
 		case "waypoints":
 			err = tasks.ScanWaypoints(client, r, target)
 		}

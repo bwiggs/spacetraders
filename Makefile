@@ -5,10 +5,10 @@ MIGRATE=migrate -source file://db/migrations -database sqlite3://db/spacetraders
 run:
 	go run *.go
 
-api-spec:
+generate:
 	go generate ./...
 
-migrate: migrate-up
+migrate: db-up
 
 db-up:
 	${MIGRATE} up
