@@ -16,6 +16,7 @@ import (
 	"github.com/bwiggs/spacetraders-go/repo"
 	"github.com/bwiggs/spacetraders-go/tasks"
 	"github.com/lmittmann/tint"
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
 
@@ -75,10 +76,20 @@ func initBackgroundTasks(client *api.Client) {
 		tasks.LogAgentMetrics(client)
 	}, 1*time.Minute)
 
-	// tasks.SetInterval(func() {
-	// 	tasks.ScanMarkets(client, r, viper.GetString("SYSTEM"))
-	// 	tasks.ScanShipyards(client, r, viper.GetString("SYSTEM"))
-	// }, 5*time.Minute)
+	ScanMarkets := true
+	if ScanMarkets {
+		tasks.SetInterval(func() {
+			slog.Info("task: scanning markets and shipyards")
+			err := tasks.ScanMarkets(client, r, viper.GetString("SYSTEM"))
+			if err != nil {
+				slog.Error(errors.Wrap(err, "failed to scan markets").Error())
+			}
+			err = tasks.ScanShipyards(client, r, viper.GetString("SYSTEM"))
+			if err != nil {
+				slog.Error(errors.Wrap(err, "failed to scan markets").Error())
+			}
+		}, 15*time.Minute)
+	}
 }
 
 func run() {

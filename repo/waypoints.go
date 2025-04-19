@@ -2,6 +2,7 @@ package repo
 
 import (
 	"github.com/bwiggs/spacetraders-go/api"
+	"github.com/bwiggs/spacetraders-go/models"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -73,4 +74,10 @@ func (r *Repo) GetSystemWaypointsByTrait(system, trait string) ([]string, error)
 		return nil, err
 	}
 	return symbols, nil
+}
+
+func (r *Repo) GetWaypoints(system string) ([]models.Waypoint, error) {
+	waypoints := []models.Waypoint{}
+	err := r.db.Select(&waypoints, "SELECT * FROM waypoints")
+	return waypoints, err
 }

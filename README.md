@@ -5,3 +5,7 @@ Leverages `golang-migrate`. You need to also install with deps for sqlite3, whic
 ```console
 go install -tags 'sqlite3 sqlite' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 ```
+
+then you can run `make db-up`
+
+# Seeding System Data

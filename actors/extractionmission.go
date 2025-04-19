@@ -60,13 +60,18 @@ func NewExtractionMission(client *api.Client, repo *repo.Repo, extractionWaypoin
 		TransferCargoToNearbyTransport{},
 	)
 
+	// surveyorBehavior := bt.NewSelector(
+	// 	ConditionIsAtExtractionWaypoint{},
+	// 	NewTodoBehavior("survey point"),
+	// )
+
 	excavateBehavior := bt.NewSelector(
 		gotoExtractionPoint,
 		transfer,
 		extract,
 	)
 
-	transportBehavior := bt.NewSelector(
+	haulerBehavior := bt.NewSelector(
 		bt.NewSequence(
 			ConditionIsAtExtractionWaypoint{},
 			bt.Invert(ConditionCargoIsFull{}),
@@ -75,15 +80,16 @@ func NewExtractionMission(client *api.Client, repo *repo.Repo, extractionWaypoin
 		gotoExtractionPoint,
 	)
 
-	excavateAndtransportBehavior := bt.NewSelector(
+	excavateAndhaulerBehavior := bt.NewSelector(
 		extract,
 		sell,
 		gotoExtractionPoint,
 	)
 
-	base.roleBehaviors[MissionShipRoleExcavatorTransporter] = excavateAndtransportBehavior
-	base.roleBehaviors[MissionShipRoleTransporter] = transportBehavior
+	base.roleBehaviors[MissionShipRoleExcavatorTransporter] = excavateAndhaulerBehavior
+	base.roleBehaviors[MissionShipRoleHauler] = haulerBehavior
 	base.roleBehaviors[MissionShipRoleExcavator] = excavateBehavior
+	// base.roleBehaviors[MissionShipRoleSurveyor] = surveyorBehavior
 
 	return &ExtractionMission{
 		BaseMission:        base,

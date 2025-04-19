@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bwiggs/spacetraders-go/api"
+	"github.com/bwiggs/spacetraders-go/repo"
 	"github.com/pkg/errors"
 )
 
@@ -106,6 +107,12 @@ func (s *Ship) SellCargo() error {
 	)
 	if err != nil {
 		return errors.Wrap(err, "Selling: Failed to get market info")
+	}
+
+	if r, err := repo.GetRepo(); err != nil {
+		if err := r.UpsertMarket(res.Data); err != nil {
+			s.log.Warn(errors.Wrap(err, "failed to update market repo data").Error())
+		}
 	}
 
 	marketItems := make(map[string]int)
@@ -553,4 +560,13 @@ func (s *Ship) InventorySymbols() []string {
 		invs[i] = string(inv.Symbol)
 	}
 	return invs
+}
+
+func (s *Ship) Update() error {
+	res, err := s.client.GetMyShip(context.TODO(), api.GetMyShipParams{ShipSymbol: s.symbol})
+	if err != nil {
+		return err
+	}
+	s.state = &res.Data
+	return nil
 }

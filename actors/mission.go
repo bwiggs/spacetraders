@@ -13,7 +13,10 @@ type MissionShipRole int
 const (
 	MissionShipRoleExcavator MissionShipRole = iota
 	MissionShipRoleTransporter
+	MissionShipRoleSurveyor
 	MissionShipRoleExcavatorTransporter
+	MissionShipRoleTrader
+	MissionShipRoleHauler
 )
 
 type Mission interface {

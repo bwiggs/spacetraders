@@ -195,6 +195,82 @@ func (a SetDestinationToExtractionWaypoint) Tick(data bt.Blackboard) bt.Behavior
 	return bt.Success
 }
 
+type SetDestinationToBestTradeMarketSale struct{}
+
+func (a SetDestinationToBestTradeMarketSale) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		bb.Logger().Error("SetDestinationToBestTradeMarketSale: expected a blackboard")
+		return bt.Running
+	}
+
+	l := bb.Logger().With("behavior", "SetDestinationToBestTradeMarketSale")
+
+	if bb.ship == nil {
+		l.Error("SetDestinationToBestTradeMarketSale: blackboard: ship was nil")
+		return bt.Running
+	}
+
+	bb.ship.Update()
+
+	trades, err := bb.repo.FindMarketTrades()
+	if err != nil {
+		l.Error(err.Error())
+		return bt.Running
+	}
+
+	if len(trades) == 0 {
+		l.Warn("no markets for trades")
+		return bt.Failure
+	}
+
+	l.Info(fmt.Sprintf("SetDestinationToBestTradeMarket: options: %v", trades))
+	l.Info("SetDestinationToBestTradeMarket: " + trades[0].Origin)
+	bb.destination = trades[0].Origin
+	bb.purchaseTargetGood = trades[0].Good
+	bb.purchaseMaxUnits = 20
+
+	return bt.Success
+}
+
+type SetDestinationToBestTradeMarket struct{}
+
+func (a SetDestinationToBestTradeMarket) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		bb.Logger().Error("SetDestinationToBestTradeMarket: expected a blackboard")
+		return bt.Running
+	}
+
+	l := bb.Logger().With("behavior", "SetDestinationToBestTradeMarket")
+
+	if bb.ship == nil {
+		l.Error("SetDestinationToBestTradeMarket: blackboard: ship was nil")
+		return bt.Running
+	}
+
+	bb.ship.Update()
+
+	trades, err := bb.repo.FindMarketTrades()
+	if err != nil {
+		l.Error(err.Error())
+		return bt.Running
+	}
+
+	if len(trades) == 0 {
+		l.Warn("no markets for trades")
+		return bt.Failure
+	}
+
+	l.Info(fmt.Sprintf("SetDestinationToBestTradeMarket: options: %v", trades))
+	l.Info("SetDestinationToBestTradeMarket: " + trades[0].Origin)
+	bb.destination = trades[0].Origin
+	bb.purchaseTargetGood = trades[0].Good
+	bb.purchaseMaxUnits = 20
+
+	return bt.Success
+}
+
 type SetDestinationToBestMarketToSellCargo struct{}
 
 func (a SetDestinationToBestMarketToSellCargo) Tick(data bt.Blackboard) bt.BehaviorStatus {
@@ -208,6 +284,8 @@ func (a SetDestinationToBestMarketToSellCargo) Tick(data bt.Blackboard) bt.Behav
 		bb.Logger().Error("SetDestinationToBestMarketToSellCargo: blackboard: ship was nil")
 		return bt.Running
 	}
+
+	bb.ship.Update()
 
 	markets, err := bb.repo.FindMarketsForGoods(bb.ship.InventorySymbols())
 	if err != nil {
@@ -284,7 +362,7 @@ func (a ConditionIsAtNavDest) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	}
 
 	if bb.destination == "" {
-		slog.Error("ConditionIsAtNavDest: blackboard: navDest was empty")
+		slog.Error("ConditionIsAtNavDest: blackboard: destination was empty")
 		return bt.Running
 	}
 
@@ -336,7 +414,7 @@ func (a NavAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	}
 
 	if bb.destination == "" {
-		slog.Error("NavAction: blackboard: navDest was empty")
+		slog.Error("NavAction: blackboard: destination was empty")
 		return bt.Running
 	}
 
@@ -473,10 +551,7 @@ func (a TransferCargoToNearbyTransport) Tick(data bt.Blackboard) bt.BehaviorStat
 
 	l := bb.Logger().With("behavior", "TransferCargoToNearbyTransport")
 
-	// use the command ship first since it's faster
-	transporters := bb.mission.GetShipsByRole(MissionShipRoleExcavatorTransporter)
-	// // then use the shuttle
-	// transporters = append(transporters, bb.mission.GetShipsByRole(MissionShipRoleTransporter)...)
+	transporters := bb.mission.GetShipsByRole(MissionShipRoleHauler)
 	var transport *Ship
 	for _, t := range transporters {
 		isAvailable := t.At(bb.extractionWaypoint) && !t.InTransit() && !t.IsCargoFull()
@@ -520,7 +595,7 @@ func (a JettisonNonSellableCargo) Tick(data bt.Blackboard) bt.BehaviorStatus {
 			return bt.Running
 		}
 
-		if len(markets) == 0 {
+		if len(markets) == 0 || inv.Symbol == "QUARTZ_SAND" {
 			bb.ship.Jettison(string(inv.Symbol))
 		}
 	}
@@ -673,7 +748,7 @@ func (a ConditionHasCargo) Tick(data any) bt.BehaviorStatus {
 		return bt.Running
 	}
 
-	if len(bb.ship.state.Cargo.Inventory) == 0 {
+	if bb.ship.IsCargoEmpty() {
 		return bt.Failure
 	}
 

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/bwiggs/spacetraders-go/api"
+	"github.com/bwiggs/spacetraders-go/utils"
 	"github.com/pkg/errors"
 )
 
@@ -105,7 +106,17 @@ func (r *Repo) UpsertTradeGoods(goods []api.TradeGood) error {
 func (r *Repo) FindMarketsForGoods(goods []string) ([]string, error) {
 
 	params := strings.Join(strings.Split(strings.Repeat("?", len(goods)), ""), ", ")
-	sql := fmt.Sprintf(`with results as (SELECT waypoint, count(*) as sellables from markets where type = 'IMPORT' and good in (%s) group by waypoint order by sellables desc) select waypoint from results`, params)
+	sql := fmt.Sprintf(`WITH results AS (
+	SELECT 
+		waypoint, 
+		count(*) as sellables 
+	FROM markets 
+	WHERE 
+		type = 'IMPORT' AND 
+		good IN (%s) 
+	GROUP BY waypoint 
+	ORDER BY sellables DESC) 
+SELECT waypoint FROM results`, params)
 
 	// this is dumb
 	s := make([]any, len(goods))
@@ -193,4 +204,76 @@ func (r *Repo) FindExportWaypointsForGood(good string) ([]string, error) {
 	}
 
 	return waypoints, nil
+}
+
+type MarketTrade struct {
+	Good  string `sql:"good"`
+	Gross int    `sql:"gross"`
+
+	Origin  string `sql:"origin"`
+	OriginX int    `sql:"ox"`
+	OriginY int    `sql:"oy"`
+	Bid     int    `sql:"bid"`
+
+	Dest  string `sql:"dest"`
+	DestX int    `sql:"dx"`
+	DestY int    `sql:"dy"`
+	Ask   int    `sql:"bid"`
+
+	Distance int
+}
+
+// FindMarketTrades
+func (r *Repo) FindMarketTrades() ([]MarketTrade, error) {
+	rows, err := r.db.Query(`SELECT 
+	im.good,
+	ex.waypoint AS origin,
+	im.ask - ex.bid AS gross,	
+	ex.bid,
+	wex.x AS ox,
+	wex.y AS oy,
+	im.waypoint AS dest,
+	im.ask,
+	wim.x AS dx,
+	wim.y AS dy
+FROM markets im
+JOIN markets ex ON im.good = ex.good AND im.type = 'IMPORT' AND ex.type = 'EXPORT' AND im.bid IS NOT NULL AND ex.ask IS NOT NULL
+JOIN waypoints wim ON wim.symbol = im.waypoint
+JOIN waypoints wex ON wex.symbol = ex.waypoint
+WHERE
+	gross > 100 AND
+	abs(wex.x) <= 100 AND abs(wex.y) <= 100 AND abs(wim.x) <= 100 AND abs(wim.y) <= 100
+ORDER BY gross DESC;`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	trades := []MarketTrade{}
+	for rows.Next() {
+		mt := MarketTrade{}
+		if err := rows.Scan(
+			&mt.Good,
+			&mt.Origin,
+			&mt.Gross,
+			&mt.Bid,
+			&mt.OriginX,
+			&mt.OriginY,
+			&mt.Dest,
+			&mt.Ask,
+			&mt.DestX,
+			&mt.DestY,
+		); err != nil {
+			log.Fatal(err)
+		}
+
+		mt.Distance = utils.Distance2dInt(mt.OriginX, mt.OriginY, mt.DestX, mt.DestY)
+		trades = append(trades, mt)
+	}
+	// Check for errors from iterating over rows.
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return trades, nil
 }
