@@ -8,6 +8,7 @@ import (
 	"github.com/bwiggs/spacetraders-go/repo"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/spf13/viper"
 	"golang.org/x/image/colornames"
 )
@@ -26,6 +27,13 @@ type Game struct {
 	lastMousePos [2]int
 
 	colors GameColors
+
+	settings Settings
+}
+
+type Settings struct {
+	showDistanceRings bool
+	showOrbitRings    bool
 }
 
 type ViewMode int
@@ -43,6 +51,10 @@ func NewGame(r *repo.Repo) *Game {
 		galaxySize:   2000.0,
 		repo:         r,
 		cameraOffset: [2]float64{0, 0},
+		settings: Settings{
+			showDistanceRings: true,
+			showOrbitRings:    true,
+		},
 		colors: GameColors{
 			Background:         color.RGBA{R: 0, G: 9, B: 22, A: 255},
 			WaypointLabelColor: color.NRGBA{R: 0, G: 0, B: 0, A: 0},
@@ -123,6 +135,14 @@ func (g *Game) Update() error {
 		g.dragging = false
 	}
 
+	if inpututil.IsKeyJustReleased(ebiten.KeyR) {
+		g.settings.showDistanceRings = !g.settings.showDistanceRings
+	}
+
+	if inpututil.IsKeyJustReleased(ebiten.KeyO) {
+		g.settings.showOrbitRings = !g.settings.showOrbitRings
+	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyC) {
 		g.camera.LookAt(0, 0)
 	} else if ebiten.IsKeyPressed(ebiten.KeyG) {
@@ -179,8 +199,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) DrawSystemUI(screen *ebiten.Image) {
-	g.DrawDistanceRings(screen)
-	g.DrawWaypointOrbits(screen, waypoints)
+	if g.settings.showDistanceRings {
+		g.DrawDistanceRings(screen)
+	}
+	if g.settings.showOrbitRings {
+		g.DrawWaypointOrbits(screen, waypoints)
+	}
 	g.DrawWaypoints(screen, waypoints)
 	// g.DrawWaypointList(screen, waypoints)
 	g.DrawShipList(screen, ships)
