@@ -9,8 +9,8 @@ import (
 )
 
 type ContractMission struct {
+	*BaseMission
 	contract *Contract
-	repo     *repo.Repo
 	bt       bt.BehaviorNode
 }
 
@@ -23,11 +23,16 @@ func (m *ContractMission) Execute(data Blackboard) {
 	data.contract = m.contract
 	data.repo = m.repo
 	m.bt.Tick(&data)
+	if data.complete {
+		// TODO: unassigned the ship so it can be used for something else
+	}
 }
 
 func NewContractMission(client *api.Client, repo *repo.Repo, contract *api.Contract) *ContractMission {
+	base := NewBaseMission(client, repo)
+	base.name = "ContractMission"
 	return &ContractMission{
-		repo: repo,
+		BaseMission: base,
 		contract: &Contract{
 			Contract: contract,
 		},
@@ -50,7 +55,7 @@ func NewContractMission(client *api.Client, repo *repo.Repo, contract *api.Contr
 						bt.Invert(ConditionHasNonContractGoods{}),
 						// SellCargoSequence
 						// bt.NewSequence(
-						NewTodoBehavior("SellCargoSequence"),
+						SellCargoAction{},
 						// )
 					),
 

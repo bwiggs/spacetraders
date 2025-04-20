@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"strings"
+	"time"
 
 	"github.com/bwiggs/spacetraders-go/api"
 	"github.com/bwiggs/spacetraders-go/models"
@@ -12,6 +13,70 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/colornames"
 )
+
+// Point2D represents a 2D position
+type Point2D struct {
+	X, Y float64
+}
+
+func Interpolate(origin, destination Point2D, startTime, endTime, currentTime time.Time) Point2D {
+	totalDuration := endTime.Sub(startTime).Seconds()
+	elapsed := currentTime.Sub(startTime).Seconds()
+
+	progress := elapsed / totalDuration
+	if progress < 0 {
+		progress = 0
+	} else if progress > 1 {
+		progress = 1
+	}
+
+	return Point2D{
+		X: origin.X + (destination.X-origin.X)*progress,
+		Y: origin.Y + (destination.Y-origin.Y)*progress,
+	}
+}
+
+func (g *Game) DrawShips(screen *ebiten.Image, ships []api.Ship) {
+	// sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
+	// minX, maxX, minY, maxY := g.camera.GetWorldBounds(sw, sh, g.systemSize)
+	for i := range ships {
+
+		if ships[i].Nav.Status != api.ShipNavStatusINTRANSIT {
+			continue
+		}
+
+		g.DrawShip(screen, ships[i])
+	}
+}
+
+func (g *Game) DrawShip(screen *ebiten.Image, ship api.Ship) {
+	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
+
+	origin := Point2D{X: float64(ship.Nav.Route.Origin.X), Y: float64(ship.Nav.Route.Origin.Y)}
+	destination := Point2D{X: float64(ship.Nav.Route.Destination.X), Y: float64(ship.Nav.Route.Destination.Y)}
+	pos := Interpolate(origin, destination, ship.Nav.Route.DepartureTime, ship.Nav.Route.Arrival, time.Now())
+
+	sx, sy := g.camera.WorldToScreen(pos.X, pos.Y, sw, sh, g.systemSize)
+
+	vector.DrawFilledRect(screen, float32(sx), float32(sy), 4, 4, g.colors.Secondary, antialias)
+
+	labelOffsetX := sx + 10.0
+	text.Draw(screen, ship.Symbol, defaultFont, int(labelOffsetX), int(sy)+7, colornames.White)
+
+	showBars := false
+
+	if showBars {
+		barWidth := float32(70.0)
+		barHeight := float32(6.0)
+		fuel := float32(ship.Fuel.Current/ship.Fuel.Capacity) * barWidth
+		vector.StrokeRect(screen, labelOffsetX, float32(sy)+12, barWidth, barHeight, 2, g.colors.Primary, antialias)
+		vector.DrawFilledRect(screen, labelOffsetX, float32(sy)+12, fuel, barHeight, g.colors.Primary, antialias)
+
+		cargo := float32(ship.Cargo.Units/ship.Cargo.Capacity) * barWidth
+		vector.StrokeRect(screen, labelOffsetX, float32(sy)+22, barWidth, barHeight, 2, g.colors.Primary, antialias)
+		vector.DrawFilledRect(screen, labelOffsetX, float32(sy)+22, cargo, barHeight, g.colors.Primary, antialias)
+	}
+}
 
 func (g *Game) DrawSystems(screen *ebiten.Image, systems []models.System) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
@@ -104,8 +169,10 @@ func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
 		parts := strings.Split(waypoint.Symbol, "-")
 		id := parts[len(parts)-1]
 
-		text.Draw(screen, waypoint.Type, defaultFont, textX, textY, g.colors.WaypointLabelColor)
-		text.Draw(screen, id, defaultFont, textX, textY+12, g.colors.WaypointLabelColor)
+		if g.settings.showWaypointLabels {
+			text.Draw(screen, waypoint.Type, defaultFont, textX, textY, g.colors.WaypointLabelColor)
+			text.Draw(screen, id, defaultFont, textX, textY+12, g.colors.WaypointLabelColor)
+		}
 	}
 }
 
@@ -179,4 +246,9 @@ func (g *Game) DrawShipList(screen *ebiten.Image, ships []api.Ship) {
 		text.Draw(screen, ships[i].Symbol+" "+string(ships[i].Registration.Role), hudFont, x, y, colornames.Aqua)
 		y += 12
 	}
+}
+
+func (g *Game) DrawContractStatus(screen *ebiten.Image, contracts []api.Contract) {
+	// sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
+
 }

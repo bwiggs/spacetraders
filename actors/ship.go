@@ -70,8 +70,8 @@ func (s *Ship) SetMission(mission Mission) {
 	s.mission = mission
 }
 
-func (s *Ship) Deliver(contractID, good string) (*api.Contract, error) {
-	s.log.Info("Delivering " + good)
+func (s *Ship) DeliverContract(contractID, good string) (*api.Contract, error) {
+	s.log.Info("DeliverContract: " + good)
 	if !s.IsDocked() {
 		if err := s.Dock(); err != nil {
 			return nil, errors.Wrap(err, "Undock failed")
@@ -327,7 +327,7 @@ func (s *Ship) Transit(dest string) error {
 	navReq := api.NewOptNavigateShipReq(api.NavigateShipReq{WaypointSymbol: dest})
 	res, err := s.client.NavigateShip(context.TODO(), navReq, api.NavigateShipParams{ShipSymbol: s.symbol})
 	if err != nil {
-		return errors.Wrap(err, "NavigateShip failed")
+		return errors.Wrap(err, "NavigateShip failed: maybe not enough fuel?")
 	}
 
 	// update state

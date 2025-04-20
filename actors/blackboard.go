@@ -21,6 +21,8 @@ type Blackboard struct {
 
 	extractionWaypoint string
 
+	complete bool
+
 	log *slog.Logger
 }
 

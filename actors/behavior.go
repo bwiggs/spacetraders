@@ -148,6 +148,8 @@ func (a ConditionContractIsFulfilled) Tick(data bt.Blackboard) bt.BehaviorStatus
 	}
 
 	if bb.contract.Fulfilled {
+		slog.Info("ConditionContractIsFulfilled: contract complete!")
+		bb.complete = true
 		return bt.Success
 	}
 
@@ -674,7 +676,7 @@ func (a DeliverContractAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
 		return bt.Success
 	}
 
-	contract, err := bb.ship.Deliver(bb.contract.ID, bb.contract.Terms.Deliver[0].TradeSymbol)
+	contract, err := bb.ship.DeliverContract(bb.contract.ID, bb.contract.Terms.Deliver[0].TradeSymbol)
 	if err != nil {
 		bb.ship.log.Error(errors.Wrap(err, "Failed to deliver contract goods").Error())
 		bb.ship.log.Debug("DeliverContractAction: fail")

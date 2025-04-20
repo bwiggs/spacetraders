@@ -32,8 +32,9 @@ type Game struct {
 }
 
 type Settings struct {
-	showDistanceRings bool
-	showOrbitRings    bool
+	showDistanceRings  bool
+	showOrbitRings     bool
+	showWaypointLabels bool
 }
 
 type ViewMode int
@@ -52,8 +53,9 @@ func NewGame(r *repo.Repo) *Game {
 		repo:         r,
 		cameraOffset: [2]float64{0, 0},
 		settings: Settings{
-			showDistanceRings: true,
-			showOrbitRings:    true,
+			showDistanceRings:  true,
+			showOrbitRings:     true,
+			showWaypointLabels: true,
 		},
 		colors: GameColors{
 			Background:         color.RGBA{R: 0, G: 9, B: 22, A: 255},
@@ -143,6 +145,10 @@ func (g *Game) Update() error {
 		g.settings.showOrbitRings = !g.settings.showOrbitRings
 	}
 
+	if inpututil.IsKeyJustReleased(ebiten.KeyL) {
+		g.settings.showWaypointLabels = !g.settings.showWaypointLabels
+	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyC) {
 		g.camera.LookAt(0, 0)
 	} else if ebiten.IsKeyPressed(ebiten.KeyG) {
@@ -195,6 +201,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.DrawGalaxyUI(screen)
 	}
 
+	g.DrawContractStatus(screen, nil)
+
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("%s | TPS: %.2f | ZOOM: %.3f | %dx%d", viper.GetString("SYSTEM"), ebiten.ActualTPS(), g.camera.Zoom, sw, sh))
 }
 
@@ -207,6 +215,7 @@ func (g *Game) DrawSystemUI(screen *ebiten.Image) {
 	}
 	g.DrawWaypoints(screen, waypoints)
 	// g.DrawWaypointList(screen, waypoints)
+	g.DrawShips(screen, ships)
 	g.DrawShipList(screen, ships)
 }
 
