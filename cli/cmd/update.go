@@ -57,6 +57,8 @@ var updateCmd = &cobra.Command{
 			err = tasks.UpdateSystems(client, r)
 		case "waypoints":
 			err = tasks.ScanWaypoints(client, r, target)
+		case "fleet":
+			err = tasks.UpdateFleet(client, r)
 		}
 
 		if err != nil {

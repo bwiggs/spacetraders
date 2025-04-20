@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"strings"
 
+	"github.com/bwiggs/spacetraders-go/api"
 	"github.com/bwiggs/spacetraders-go/models"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
@@ -104,7 +105,7 @@ func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
 		id := parts[len(parts)-1]
 
 		text.Draw(screen, waypoint.Type, defaultFont, textX, textY, g.colors.WaypointLabelColor)
-		text.Draw(screen, id, defaultFont, textX, textY+18, g.colors.WaypointLabelColor)
+		text.Draw(screen, id, defaultFont, textX, textY+12, g.colors.WaypointLabelColor)
 	}
 }
 
@@ -168,5 +169,14 @@ func (g *Game) DrawWaypointList(screen *ebiten.Image, wp []models.Waypoint) {
 	for i := range waypoints {
 		text.Draw(screen, fmt.Sprintf("%s - %s", waypoints[i].Symbol, waypoints[i].Type), hudFont, x, y, color.White)
 		y += 10
+	}
+}
+
+func (g *Game) DrawShipList(screen *ebiten.Image, ships []api.Ship) {
+	x := 10
+	y := 30
+	for i := range ships {
+		text.Draw(screen, ships[i].Symbol+" "+string(ships[i].Registration.Role), hudFont, x, y, colornames.Aqua)
+		y += 12
 	}
 }

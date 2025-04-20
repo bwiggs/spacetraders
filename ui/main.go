@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 
+	"github.com/bwiggs/spacetraders-go/api"
 	"github.com/bwiggs/spacetraders-go/models"
 	"github.com/bwiggs/spacetraders-go/repo"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -27,7 +28,6 @@ var hudFont font.Face
 
 const (
 	antialias              = true
-	defaultZoom            = 1.2
 	systemToGalaxyThresh   = .15
 	galaxyToSystemThresh   = 4
 	defaultSystemZoon      = 1.1
@@ -39,16 +39,16 @@ const (
 var currSystem string
 var waypoints []models.Waypoint
 var systems []models.System
+var ships []api.Ship
 var systemCoords map[string][]float64
 var constellationColors map[string]color.Color
-var backgroundColor = color.RGBA{R: 0, G: 9, B: 22, A: 255}
 
 func main() {
 	viper.SetEnvPrefix("ST")
 	viper.AutomaticEnv()
 
 	defaultFont = loadFont("ui/assets/IBMPlexMono-Medium.ttf", 12)
-	hudFont = loadFont("ui/assets/IBMPlexMono-Medium.ttf", 10)
+	hudFont = loadFont("ui/assets/IBMPlexMono-Regular.ttf", 12)
 
 	r, err := repo.GetRepo()
 	if err != nil {
@@ -56,6 +56,11 @@ func main() {
 	}
 
 	currSystem = viper.GetString("SYSTEM")
+
+	ships, err = r.GetFleet()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	waypoints, err = r.GetWaypoints(currSystem)
 	if err != nil {

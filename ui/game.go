@@ -157,7 +157,7 @@ func (g *Game) Update() error {
 	if g.mode == SystemMode {
 		g.colors.DistanceRings = fadeColorWithZoom(g.camera.Zoom, 1.0, 2.0, 0.1, .6, g.colors.Secondary)
 		g.colors.WaypointOrbit = fadeColorWithZoom(g.camera.Zoom, 1.0, 2.0, 0, .1, g.colors.Primary)
-		g.colors.WaypointLabelColor = fadeColorWithZoom(g.camera.Zoom, 1, 1.1, 0, 1, colornames.White)
+		g.colors.WaypointLabelColor = fadeColorWithZoom(g.camera.Zoom, 1, 1.1, 0, 1, colornames.Silver)
 	}
 
 	return nil
@@ -165,7 +165,7 @@ func (g *Game) Update() error {
 
 func (g *Game) Draw(screen *ebiten.Image) {
 
-	screen.Fill(backgroundColor)
+	screen.Fill(g.colors.Background)
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	if g.mode == SystemMode {
@@ -182,7 +182,8 @@ func (g *Game) DrawSystemUI(screen *ebiten.Image) {
 	g.DrawDistanceRings(screen)
 	g.DrawWaypointOrbits(screen, waypoints)
 	g.DrawWaypoints(screen, waypoints)
-	g.DrawWaypointList(screen, waypoints)
+	// g.DrawWaypointList(screen, waypoints)
+	g.DrawShipList(screen, ships)
 }
 
 func (g *Game) DrawGalaxyUI(screen *ebiten.Image) {
