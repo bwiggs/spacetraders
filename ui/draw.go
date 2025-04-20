@@ -33,8 +33,10 @@ func (g *Game) DrawSystem(screen *ebiten.Image, system models.System) {
 	sx, sy := g.camera.WorldToScreen(float64(system.X), float64(system.Y), sw, sh, g.systemSize)
 
 	size := float32(1)
-	if g.camera.Zoom > .08 {
+	if g.camera.Zoom > .1 {
 		size = 2
+	} else if g.camera.Zoom > .2 {
+		size = 3
 	}
 
 	c := constellationColors[system.Constellation]
@@ -43,10 +45,12 @@ func (g *Game) DrawSystem(screen *ebiten.Image, system models.System) {
 	}
 	if system.Symbol == currSystem {
 		c = colornames.Lime
-		size = size * 2
 	}
 
 	vector.DrawFilledRect(screen, float32(sx), float32(sy), size, size, c, antialias)
+	if g.camera.Zoom > showSystemLabelsAtZoom {
+		text.Draw(screen, fmt.Sprintf("%s (%s)", system.Symbol, system.Name), defaultFont, int(sx)+10.0, int(sy)+7, colornames.White)
+	}
 }
 
 func (g *Game) DrawWaypoints(screen *ebiten.Image, waypoints []models.Waypoint) {
@@ -91,7 +95,7 @@ func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
 	vector.DrawFilledCircle(screen, float32(sx), float32(sy), r*float32(g.camera.Zoom), c, antialias)
 
 	// render waypoint label
-	if g.camera.Zoom > 2.0 {
+	if g.camera.Zoom > 1.0 {
 
 		textX := int(sx) + 10 + int(float64(r)*g.camera.Zoom) // shift text a bit right of the circle
 		textY := int(sy) - 1                                  // shift text a bit up
@@ -129,6 +133,9 @@ func (g *Game) DrawDistanceRings(screen *ebiten.Image) {
 }
 
 func (g *Game) DrawWaypointOrbits(screen *ebiten.Image, waypoints []models.Waypoint) {
+	if g.camera.Zoom < 1.0 {
+		return
+	}
 	for i := range waypoints {
 		if waypoints[i].Type == "MOON" {
 			continue
@@ -138,10 +145,6 @@ func (g *Game) DrawWaypointOrbits(screen *ebiten.Image, waypoints []models.Waypo
 }
 
 func (g *Game) DrawWaypointOrbit(screen *ebiten.Image, wp models.Waypoint) {
-
-	if g.camera.Zoom < 1.5 {
-		return
-	}
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 

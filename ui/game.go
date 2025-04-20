@@ -44,11 +44,12 @@ func NewGame(r *repo.Repo) *Game {
 		repo:         r,
 		cameraOffset: [2]float64{0, 0},
 		colors: GameColors{
-			Background:    color.RGBA{R: 0, G: 9, B: 22, A: 255},
-			Primary:       colornames.Aqua,
-			Secondary:     colornames.Orange,
-			WaypointOrbit: colornames.Aqua,
-			DistanceRings: colornames.Aqua,
+			Background:         color.RGBA{R: 0, G: 9, B: 22, A: 255},
+			WaypointLabelColor: color.NRGBA{R: 0, G: 0, B: 0, A: 0},
+			Primary:            colornames.Aqua,
+			Secondary:          colornames.Orange,
+			WaypointOrbit:      colornames.Aqua,
+			DistanceRings:      colornames.Aqua,
 		},
 	}
 
@@ -123,43 +124,40 @@ func (g *Game) Update() error {
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyC) {
-		g.camera.CenterX = 0
-		g.camera.CenterY = 0
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyG) {
-		g.camera.CenterX = 0
-		g.camera.CenterY = 0
-		g.camera.Zoom = minZoom
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyS) {
-		g.camera.CenterX = 0
-		g.camera.CenterY = 0
-		g.camera.Zoom = defaultZoom
-	}
-
-	currMode := g.mode
-	if g.camera.Zoom < zoomModeThresh {
+		g.camera.LookAt(0, 0)
+	} else if ebiten.IsKeyPressed(ebiten.KeyG) {
+		g.camera.LookAt(0, 0)
 		g.mode = GalaxyMode
-	} else {
+		g.camera.Zoom = minZoom
+	} else if ebiten.IsKeyPressed(ebiten.KeyS) {
+		g.camera.LookAt(0, 0)
 		g.mode = SystemMode
-	}
+		g.camera.Zoom = defaultSystemZoon
+	} else {
+		currMode := g.mode
+		if g.mode == GalaxyMode && g.camera.Zoom > galaxyToSystemThresh {
+			g.mode = SystemMode
+			g.camera.Zoom = systemToGalaxyThresh
+		} else if g.mode == SystemMode && g.camera.Zoom < systemToGalaxyThresh {
+			g.mode = GalaxyMode
+			g.camera.Zoom = galaxyToSystemThresh
+		}
 
-	if g.mode != currMode {
-		// Reset camera position when switching modes
-		if g.mode == GalaxyMode {
-			sysCoords := systemCoords[currSystem]
-			g.camera.LookAt(sysCoords[0], sysCoords[1])
-		} else {
-			g.camera.LookAt(0, 0)
+		if g.mode != currMode {
+			// Reset camera position when switching modes
+			if g.mode == GalaxyMode {
+				sysCoords := systemCoords[currSystem]
+				g.camera.LookAt(sysCoords[0], sysCoords[1])
+			} else {
+				g.camera.LookAt(0, 0)
+			}
 		}
 	}
 
 	if g.mode == SystemMode {
-		g.colors.DistanceRings = fadeColorWithZoom(g.camera.Zoom, 1.2, 5.0, 0.1, .6, g.colors.Secondary)
-		g.colors.WaypointOrbit = fadeColorWithZoom(g.camera.Zoom, 1.5, 5.0, 0, .1, g.colors.Primary)
-		g.colors.WaypointLabelColor = fadeColorWithZoom(g.camera.Zoom, 2, 5.0, 0, 1, colornames.White)
+		g.colors.DistanceRings = fadeColorWithZoom(g.camera.Zoom, 1.0, 2.0, 0.1, .6, g.colors.Secondary)
+		g.colors.WaypointOrbit = fadeColorWithZoom(g.camera.Zoom, 1.0, 2.0, 0, .1, g.colors.Primary)
+		g.colors.WaypointLabelColor = fadeColorWithZoom(g.camera.Zoom, 1, 1.1, 0, 1, colornames.White)
 	}
 
 	return nil
@@ -170,12 +168,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(backgroundColor)
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
-
-	g.DrawWaypoint(screen, models.Waypoint{X: 0, Y: 0, Type: "STAR", Symbol: viper.GetString("SYSTEM")})
-
-	if g.camera.Zoom >= zoomModeThresh {
+	if g.mode == SystemMode {
+		g.DrawWaypoint(screen, models.Waypoint{X: 0, Y: 0, Type: "STAR", Symbol: viper.GetString("SYSTEM")})
 		g.DrawSystemUI(screen)
-	} else if g.camera.Zoom < zoomModeThresh {
+	} else {
 		g.DrawGalaxyUI(screen)
 	}
 

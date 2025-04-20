@@ -26,11 +26,14 @@ var defaultFont font.Face
 var hudFont font.Face
 
 const (
-	antialias      = true
-	defaultZoom    = 1.2
-	zoomModeThresh = .6
-	minZoom        = .015
-	maxZoom        = 15.0
+	antialias              = true
+	defaultZoom            = 1.2
+	systemToGalaxyThresh   = .15
+	galaxyToSystemThresh   = 4
+	defaultSystemZoon      = 1.1
+	minZoom                = 0.014
+	maxZoom                = 15.0
+	showSystemLabelsAtZoom = 0.4
 )
 
 var currSystem string
@@ -44,7 +47,7 @@ func main() {
 	viper.SetEnvPrefix("ST")
 	viper.AutomaticEnv()
 
-	defaultFont = loadFont("ui/assets/IBMPlexMono-Medium.ttf", 16)
+	defaultFont = loadFont("ui/assets/IBMPlexMono-Medium.ttf", 12)
 	hudFont = loadFont("ui/assets/IBMPlexMono-Medium.ttf", 10)
 
 	r, err := repo.GetRepo()
