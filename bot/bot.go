@@ -49,8 +49,8 @@ func Start(client *api.Client, r *repo.Repo) {
 		fleetByType[role] = append(fleetByType[role], &s)
 	}
 
-	// contractMission(client, r, fleet)
-	tradeMission(client, r, fleet)
+	contractMission(client, r, fleet)
+	// tradeMission(client, r, fleet)
 	// miningMission(client, r, fleet)
 	// extractionMission(client, r, fleet)
 }

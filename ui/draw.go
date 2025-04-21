@@ -48,7 +48,22 @@ func (g *Game) DrawShips(screen *ebiten.Image, ships []api.Ship) {
 		g.DrawShip(screen, ships[i])
 	}
 }
+func formatDuration(d time.Duration) string {
+	h := int(d.Hours())
+	m := int(d.Minutes()) % 60
+	s := int(d.Seconds()) % 60
 
+	var out string
+	if h > 0 {
+		out += fmt.Sprintf("%dh ", h)
+	}
+	if m > 0 || h > 0 {
+		out += fmt.Sprintf("%dm ", m)
+	}
+	out += fmt.Sprintf("%ds", s)
+
+	return out
+}
 func (g *Game) DrawShip(screen *ebiten.Image, ship api.Ship) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 
@@ -61,20 +76,32 @@ func (g *Game) DrawShip(screen *ebiten.Image, ship api.Ship) {
 	vector.DrawFilledRect(screen, float32(sx), float32(sy), 4, 4, g.colors.Secondary, antialias)
 
 	labelOffsetX := sx + 10.0
+	labelOffset := float32(11)
+	eta := time.Until(ship.Nav.Route.Arrival)
 	text.Draw(screen, ship.Symbol, defaultFont, int(labelOffsetX), int(sy)+7, colornames.White)
+	if eta > 0 {
+		text.Draw(screen, "ETA: "+formatDuration(eta), defaultFont, int(labelOffsetX), int(sy)+20, colornames.White)
+	}
 
-	showBars := false
+	showBars := true
 
 	if showBars {
 		barWidth := float32(70.0)
 		barHeight := float32(6.0)
-		fuel := float32(ship.Fuel.Current/ship.Fuel.Capacity) * barWidth
-		vector.StrokeRect(screen, labelOffsetX, float32(sy)+12, barWidth, barHeight, 2, g.colors.Primary, antialias)
-		vector.DrawFilledRect(screen, labelOffsetX, float32(sy)+12, fuel, barHeight, g.colors.Primary, antialias)
+		currOffsetY := float32(sy) + 20.0
 
-		cargo := float32(ship.Cargo.Units/ship.Cargo.Capacity) * barWidth
-		vector.StrokeRect(screen, labelOffsetX, float32(sy)+22, barWidth, barHeight, 2, g.colors.Primary, antialias)
-		vector.DrawFilledRect(screen, labelOffsetX, float32(sy)+22, cargo, barHeight, g.colors.Primary, antialias)
+		if ship.Fuel.Capacity > 0 {
+			fuel := float32(ship.Fuel.Current/ship.Fuel.Capacity) * barWidth
+			vector.StrokeRect(screen, labelOffsetX, currOffsetY, barWidth, barHeight, 2, g.colors.Primary, antialias)
+			vector.DrawFilledRect(screen, labelOffsetX, currOffsetY, fuel, barHeight, g.colors.Primary, antialias)
+			currOffsetY += labelOffset
+		}
+
+		if ship.Cargo.Capacity > 0 {
+			cargo := float32(ship.Cargo.Units/ship.Cargo.Capacity) * barWidth
+			vector.StrokeRect(screen, labelOffsetX, currOffsetY, barWidth, barHeight, 2, g.colors.Primary, antialias)
+			vector.DrawFilledRect(screen, labelOffsetX, currOffsetY, cargo, barHeight, g.colors.Primary, antialias)
+		}
 	}
 }
 
@@ -109,12 +136,14 @@ func (g *Game) DrawSystem(screen *ebiten.Image, system models.System) {
 	if c == nil {
 		c = colornames.White
 	}
+	c = colornames.White
 	if system.Symbol == currSystem {
 		c = colornames.Lime
 	}
 
-	vector.DrawFilledRect(screen, float32(sx), float32(sy), size, size, c, antialias)
-	if g.camera.Zoom > showSystemLabelsAtZoom {
+	// vector.DrawFilledRect(screen, float32(sx), float32(sy), size, size, c, antialias)
+	vector.StrokeLine(screen, float32(sx), float32(sy), float32(sx+size), float32(sy+size), size, c, antialias)
+	if g.camera.Zoom > showSystemLabelsAtZoom || currSystem == system.Symbol {
 		text.Draw(screen, fmt.Sprintf("%s (%s)", system.Symbol, system.Name), defaultFont, int(sx)+10.0, int(sy)+7, colornames.White)
 	}
 }

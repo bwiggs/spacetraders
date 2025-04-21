@@ -15,6 +15,7 @@ func ScanSystem(client *api.Client, repo *repo.Repo, system string) error {
 
 	var err error
 
+	log.Info("ScanSystem: " + system)
 	log.Info("ScanSystem: waypoints")
 	err = ScanWaypoints(client, repo, system)
 	if err != nil {
@@ -45,7 +46,7 @@ func ScanWaypoints(client *api.Client, repo *repo.Repo, system string) error {
 	limit := 20
 	for {
 		log := baselog.With("page", page, "limit", limit)
-		log.Info("fetching systems")
+		log.Info("fetching waypoints")
 		params := api.GetSystemWaypointsParams{SystemSymbol: system, Limit: api.NewOptInt(limit), Page: api.NewOptInt(page)}
 		res, err := client.GetSystemWaypoints(ctx, params)
 		if err != nil {

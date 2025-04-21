@@ -10,6 +10,11 @@ generate:
 
 migrate: db-up
 
+reset: db-delete db-up
+
+db-delete:
+	rm -f db/spacetraders.db
+
 db-up:
 	${MIGRATE} up
 

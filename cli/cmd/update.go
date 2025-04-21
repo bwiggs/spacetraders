@@ -44,6 +44,8 @@ var updateCmd = &cobra.Command{
 
 		switch args[0] {
 		case "all":
+			fallthrough
+		case "system":
 			err = tasks.ScanSystem(client, r, target)
 		case "markets":
 			err = tasks.ScanMarkets(client, r, target)

@@ -3,12 +3,16 @@ package main
 import (
 	"image/color"
 	"log"
+	"log/slog"
 	"math"
+	"os"
+	"path"
 
 	"github.com/bwiggs/spacetraders-go/api"
 	"github.com/bwiggs/spacetraders-go/models"
 	"github.com/bwiggs/spacetraders-go/repo"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/lmittmann/tint"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/rand"
 	"golang.org/x/image/font"
@@ -18,9 +22,32 @@ import (
 )
 
 func init() {
+	logHandler := tint.NewHandler(os.Stdout, &tint.Options{Level: slog.LevelDebug})
+	// logHandler := slog.NewJSONHandler(os.Stdout, nil)
+	logger := slog.New(logHandler)
+
+	slog.SetDefault(logger)
 	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
+		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+			slog.Error("failed to start pprof server", "err", err)
+		}
 	}()
+
+	ud, err := os.UserConfigDir()
+	if err != nil {
+		slog.Error("failed to get user config dir", "err", err)
+		return
+	}
+
+	up := path.Join(ud, "spacetraders")
+	if err := os.Mkdir(up, 0755); err != nil {
+		if !os.IsExist(err) {
+			slog.Error("failed to create config dir: "+up, "err", err)
+			return
+		}
+	}
+
+	slog.Info("config dir: " + up)
 }
 
 var defaultFont font.Face
@@ -44,6 +71,7 @@ var systemCoords map[string][]float64
 var constellationColors map[string]color.Color
 
 func main() {
+
 	viper.SetEnvPrefix("ST")
 	viper.AutomaticEnv()
 
@@ -89,10 +117,11 @@ func main() {
 	}
 
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	ebiten.SetWindowSize(1680, 1020)
+	ebiten.SetWindowSize(2560, 1600)
 
-	// ebiten.SetTPS(30)
+	ebiten.SetTPS(60)
 	ebiten.SetWindowTitle("spacetraders.io")
+	slog.Info("spacetraders.io - UI", "system", currSystem, "agent", viper.GetString("AGENT"))
 	if err := ebiten.RunGame(NewGame(r)); err != nil {
 		log.Fatal(err)
 	}

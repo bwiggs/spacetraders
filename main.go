@@ -60,7 +60,7 @@ func exec() {
 		log.Fatal(err)
 	}
 
-	// go initBackgroundTasks(client)
+	go initBackgroundTasks(client)
 
 	bot.Start(client, r)
 }

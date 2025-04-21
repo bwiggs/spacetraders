@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"log/slog"
 
 	"github.com/bwiggs/spacetraders-go/models"
 	"github.com/bwiggs/spacetraders-go/repo"
@@ -137,6 +138,17 @@ func (g *Game) Update() error {
 		g.dragging = false
 	}
 
+	if inpututil.IsKeyJustReleased(ebiten.KeyF) {
+		tps := ebiten.TPS()
+		if tps == 30 {
+			ebiten.SetTPS(60)
+		} else if tps == 60 {
+			ebiten.SetTPS(120)
+		} else {
+			ebiten.SetTPS(30)
+		}
+	}
+
 	if inpututil.IsKeyJustReleased(ebiten.KeyR) {
 		g.settings.showDistanceRings = !g.settings.showDistanceRings
 	}
@@ -149,22 +161,27 @@ func (g *Game) Update() error {
 		g.settings.showWaypointLabels = !g.settings.showWaypointLabels
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyC) {
+	if inpututil.IsKeyJustReleased(ebiten.KeyC) {
+		slog.Info("Centering Camera")
 		g.camera.LookAt(0, 0)
-	} else if ebiten.IsKeyPressed(ebiten.KeyG) {
+	} else if inpututil.IsKeyJustReleased(ebiten.KeyG) {
+		slog.Info("Switching to Galaxy Mode")
 		g.camera.LookAt(0, 0)
 		g.mode = GalaxyMode
 		g.camera.Zoom = minZoom
-	} else if ebiten.IsKeyPressed(ebiten.KeyS) {
+	} else if inpututil.IsKeyJustReleased(ebiten.KeyS) {
+		slog.Info("Switching to System Mode")
 		g.camera.LookAt(0, 0)
 		g.mode = SystemMode
 		g.camera.Zoom = defaultSystemZoon
 	} else {
 		currMode := g.mode
 		if g.mode == GalaxyMode && g.camera.Zoom > galaxyToSystemThresh {
+			slog.Info("Switching to System Mode")
 			g.mode = SystemMode
 			g.camera.Zoom = systemToGalaxyThresh
 		} else if g.mode == SystemMode && g.camera.Zoom < systemToGalaxyThresh {
+			slog.Info("Switching to Galaxy Mode")
 			g.mode = GalaxyMode
 			g.camera.Zoom = galaxyToSystemThresh
 		}
@@ -181,9 +198,9 @@ func (g *Game) Update() error {
 	}
 
 	if g.mode == SystemMode {
-		g.colors.DistanceRings = fadeColorWithZoom(g.camera.Zoom, 1.0, 2.0, 0.1, .6, g.colors.Secondary)
-		g.colors.WaypointOrbit = fadeColorWithZoom(g.camera.Zoom, 1.0, 2.0, 0, .1, g.colors.Primary)
-		g.colors.WaypointLabelColor = fadeColorWithZoom(g.camera.Zoom, 1, 1.1, 0, 1, colornames.Silver)
+		g.colors.DistanceRings = fadeColorWithZoom(g.camera.Zoom, 0.75, 1.1, 0.1, .6, g.colors.Secondary)
+		g.colors.WaypointOrbit = fadeColorWithZoom(g.camera.Zoom, 0.9, 1.1, 0, .1, g.colors.Primary)
+		g.colors.WaypointLabelColor = fadeColorWithZoom(g.camera.Zoom, 1.0, 1.1, 0, 1, colornames.Silver)
 	}
 
 	return nil
