@@ -146,16 +146,16 @@ func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
 		c = colornames.White
 	}
 
-	r := float32(2)
+	r := float32(3)
 	if waypoint.Type == "STAR" {
 		r = float32(5)
-	} else if waypoint.Type == "PLANET" {
-		r = float32(2.5)
+	} else if waypoint.Type == "ASTEROID" {
+		r = 1
 	}
 
 	// draw waypoint
 	sx, sy := g.camera.WorldToScreen(float64(waypoint.X), float64(waypoint.Y), sw, sh)
-	if g.camera.Zoom < defaultSystemZoom {
+	if g.camera.Zoom < showSystemModeDetailsZoomLevel {
 		vector.DrawFilledRect(screen, float32(sx), float32(sy), r, r, c, g.settings.antialias)
 	} else {
 		vector.DrawFilledCircle(screen, float32(sx), float32(sy), max(1, r*float32(g.camera.Zoom)), c, g.settings.antialias)

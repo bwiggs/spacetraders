@@ -70,7 +70,8 @@ func NewGame(r *repo.Repo) *Game {
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return outsideWidth, outsideHeight
+	return outsideWidth, outsideHeight // or a fixed value like 1280x720
+
 }
 
 func (g *Game) Update() error {
@@ -83,6 +84,10 @@ func (g *Game) Update() error {
 	if _, scrollY := ebiten.Wheel(); scrollY != 0 {
 		// Get screen size and cursor position
 		sw, sh := ebiten.WindowSize()
+		if ebiten.IsFullscreen() {
+			sw, sh = ebiten.Monitor().Size()
+		}
+
 		mx, my := ebiten.CursorPosition()
 		mouseScreenX := float64(mx)
 		mouseScreenY := float64(my)
@@ -241,6 +246,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(g.colors.Background)
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
+
 	if g.mode == SystemMode {
 		g.DrawWaypoint(screen, models.Waypoint{X: 0, Y: 0, Type: "STAR", Symbol: viper.GetString("SYSTEM")})
 		g.DrawSystemUI(screen)
@@ -248,9 +254,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.DrawGalaxyUI(screen)
 	}
 
-	g.DrawContractStatus(screen, nil)
+	// g.DrawContractStatus(screen, nil)
 
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("%s | TPS: %.2f | ZOOM: %.3f | %dx%d", viper.GetString("SYSTEM"), ebiten.ActualTPS(), g.camera.Zoom, sw, sh))
+	mx, my := ebiten.CursorPosition()
+	dbg := fmt.Sprintf("%s | TPS: %.2f | ZOOM: %.3f | R:%dx%d | M:%dx%d", viper.GetString("SYSTEM"), ebiten.ActualTPS(), g.camera.Zoom, sw, sh, mx, my)
+	ebitenutil.DebugPrint(screen, dbg)
 }
 
 func (g *Game) DrawSystemUI(screen *ebiten.Image) {
