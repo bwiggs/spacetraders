@@ -94,9 +94,9 @@ func (g *Game) Update() error {
 		zoomFactor := 1 + scrollY*0.02
 		newZoom := g.camera.Zoom * zoomFactor
 		if g.mode == SystemMode {
-			g.camera.Zoom = Clamp(newZoom, float64(minSystemZoom), float64(maxSystemZoom))
+			g.camera.Zoom = Clamp(newZoom, 0, float64(maxSystemZoom))
 		} else {
-			g.camera.Zoom = Clamp(newZoom, float64(minGalaxyZoom), float64(maxGalaxyZoom))
+			g.camera.Zoom = Clamp(newZoom, float64(minGalaxyZoom), 10)
 		}
 
 		// 3. World position under cursor after zoom
@@ -183,7 +183,7 @@ func (g *Game) Update() error {
 	} else {
 		// update the camera mode based on zoom level
 
-		if g.mode == GalaxyMode && g.camera.Zoom >= maxGalaxyZoom {
+		if g.mode == GalaxyMode && g.camera.Zoom > transitionGalaxyToSystemZoomLevel {
 			slog.Info("Switching to System View")
 			sw, sh := ebiten.WindowSize()
 
@@ -195,7 +195,7 @@ func (g *Game) Update() error {
 
 			// Step 2: Switch to system mode
 			g.mode = SystemMode
-			g.camera.Zoom = minGalaxyZoom
+			g.camera.Zoom = transitionSystemToGalaxyZoomLevel
 			g.camera.LookAt(0, 0)
 
 			// Step 3: Figure out what world position (in system coords) lives at that screen pixel
@@ -204,7 +204,7 @@ func (g *Game) Update() error {
 
 			// Step 4: Offset camera so that system-local (0, 0) maps to that pixel
 			g.camera.LookAt(-wx, -wy)
-		} else if g.mode == SystemMode && g.camera.Zoom <= minSystemZoom {
+		} else if g.mode == SystemMode && g.camera.Zoom < transitionSystemToGalaxyZoomLevel {
 			sw, sh := ebiten.WindowSize()
 
 			// get current screen position of the system
@@ -212,7 +212,7 @@ func (g *Game) Update() error {
 
 			// switch modes
 			g.mode = GalaxyMode
-			g.camera.Zoom = maxGalaxyZoom
+			g.camera.Zoom = transitionGalaxyToSystemZoomLevel
 
 			// look at system in galaxy space
 			gx := systemCoords[currSystem][0]
