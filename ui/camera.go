@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log/slog"
 	"math"
 )
 
@@ -21,45 +22,34 @@ func NewCamera2D() *Camera2D {
 
 // LookAt sets the camera to center on the given world coordinates
 func (c *Camera2D) LookAt(x, y float64) {
+	slog.Debug("camera: LookAt", "x", x, "y", y)
 	c.CenterX = x
 	c.CenterY = y
 }
 
-// GetTransform returns the world->screen scale and offset
-func (c *Camera2D) GetTransform(screenWidth, screenHeight int, worldSize float64) (scale, offsetX, offsetY float64) {
-	sw := float64(screenWidth)
-	sh := float64(screenHeight)
-
-	// Base scale on the smaller dimension to maintain aspect ratio
-	baseScale := math.Min(sw/worldSize, sh/worldSize)
-
-	scale = baseScale * c.Zoom
-
-	// Offset so CenterX/Y is in center of screen
-	offsetX = (sw / 2) - (c.CenterX * scale)
-	offsetY = (sh / 2) - (c.CenterY * scale)
-
+func (c *Camera2D) GetTransform(screenWidth, screenHeight int) (scale, offsetX, offsetY float64) {
+	scale = c.Zoom
+	offsetX = float64(screenWidth)/2 - c.CenterX*scale
+	offsetY = float64(screenHeight)/2 - c.CenterY*scale
 	return
 }
 
-// WorldToScreen converts world coordinates to screen coordinates
-func (c *Camera2D) WorldToScreen(wx, wy float64, screenWidth, screenHeight int, worldSize float64) (float32, float32) {
-	scale, offsetX, offsetY := c.GetTransform(screenWidth, screenHeight, worldSize)
+func (c *Camera2D) WorldToScreen(wx, wy float64, screenWidth, screenHeight int) (float64, float64) {
+	scale, offsetX, offsetY := c.GetTransform(screenWidth, screenHeight)
 	sx := wx*scale + offsetX
 	sy := wy*scale + offsetY
-	return float32(sx), float32(sy)
+	return sx, sy
 }
 
-// ScreenToWorld converts screen coordinates to world coordinates
-func (c *Camera2D) ScreenToWorld(sx, sy float64, screenWidth, screenHeight int, worldSize float64) (float64, float64) {
-	scale, offsetX, offsetY := c.GetTransform(screenWidth, screenHeight, worldSize)
+func (c *Camera2D) ScreenToWorld(sx, sy float64, screenWidth, screenHeight int) (float64, float64) {
+	scale, offsetX, offsetY := c.GetTransform(screenWidth, screenHeight)
 	wx := (sx - offsetX) / scale
 	wy := (sy - offsetY) / scale
 	return wx, wy
 }
 
-func (c *Camera2D) GetWorldBounds(screenWidth, screenHeight int, worldSize float64) (minX, maxX, minY, maxY float32) {
-	scale, offsetX, offsetY := c.GetTransform(screenWidth, screenHeight, worldSize)
+func (c *Camera2D) GetWorldBounds(screenWidth, screenHeight int) (minX, maxX, minY, maxY float32) {
+	scale, offsetX, offsetY := c.GetTransform(screenWidth, screenHeight)
 
 	topLeftX, topLeftY := (0-offsetX)/scale, (0-offsetY)/scale
 	bottomRightX, bottomRightY := (float64(screenWidth)-offsetX)/scale, (float64(screenHeight)-offsetY)/scale

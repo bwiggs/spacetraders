@@ -19,26 +19,9 @@ type Point2D struct {
 	X, Y float64
 }
 
-func Interpolate(origin, destination Point2D, startTime, endTime, currentTime time.Time) Point2D {
-	totalDuration := endTime.Sub(startTime).Seconds()
-	elapsed := currentTime.Sub(startTime).Seconds()
-
-	progress := elapsed / totalDuration
-	if progress < 0 {
-		progress = 0
-	} else if progress > 1 {
-		progress = 1
-	}
-
-	return Point2D{
-		X: origin.X + (destination.X-origin.X)*progress,
-		Y: origin.Y + (destination.Y-origin.Y)*progress,
-	}
-}
-
 func (g *Game) DrawShips(screen *ebiten.Image, ships []api.Ship) {
 	// sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
-	// minX, maxX, minY, maxY := g.camera.GetWorldBounds(sw, sh, g.systemSize)
+	// minX, maxX, minY, maxY := g.camera.GetWorldBounds(sw, sh)
 	for i := range ships {
 
 		if ships[i].Nav.Status != api.ShipNavStatusINTRANSIT {
@@ -48,22 +31,7 @@ func (g *Game) DrawShips(screen *ebiten.Image, ships []api.Ship) {
 		g.DrawShip(screen, ships[i])
 	}
 }
-func formatDuration(d time.Duration) string {
-	h := int(d.Hours())
-	m := int(d.Minutes()) % 60
-	s := int(d.Seconds()) % 60
 
-	var out string
-	if h > 0 {
-		out += fmt.Sprintf("%dh ", h)
-	}
-	if m > 0 || h > 0 {
-		out += fmt.Sprintf("%dm ", m)
-	}
-	out += fmt.Sprintf("%ds", s)
-
-	return out
-}
 func (g *Game) DrawShip(screen *ebiten.Image, ship api.Ship) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 
@@ -71,7 +39,7 @@ func (g *Game) DrawShip(screen *ebiten.Image, ship api.Ship) {
 	destination := Point2D{X: float64(ship.Nav.Route.Destination.X), Y: float64(ship.Nav.Route.Destination.Y)}
 	pos := Interpolate(origin, destination, ship.Nav.Route.DepartureTime, ship.Nav.Route.Arrival, time.Now())
 
-	sx, sy := g.camera.WorldToScreen(pos.X, pos.Y, sw, sh, g.systemSize)
+	sx, sy := g.camera.WorldToScreen(pos.X, pos.Y, sw, sh)
 
 	vector.DrawFilledRect(screen, float32(sx), float32(sy), 4, 4, g.colors.Secondary, antialias)
 
@@ -92,22 +60,22 @@ func (g *Game) DrawShip(screen *ebiten.Image, ship api.Ship) {
 
 		if ship.Fuel.Capacity > 0 {
 			fuel := float32(ship.Fuel.Current/ship.Fuel.Capacity) * barWidth
-			vector.StrokeRect(screen, labelOffsetX, currOffsetY, barWidth, barHeight, 2, g.colors.Primary, antialias)
-			vector.DrawFilledRect(screen, labelOffsetX, currOffsetY, fuel, barHeight, g.colors.Primary, antialias)
+			vector.StrokeRect(screen, float32(labelOffsetX), currOffsetY, barWidth, barHeight, 2, g.colors.Primary, antialias)
+			vector.DrawFilledRect(screen, float32(labelOffsetX), currOffsetY, fuel, barHeight, g.colors.Primary, antialias)
 			currOffsetY += labelOffset
 		}
 
 		if ship.Cargo.Capacity > 0 {
 			cargo := float32(ship.Cargo.Units/ship.Cargo.Capacity) * barWidth
-			vector.StrokeRect(screen, labelOffsetX, currOffsetY, barWidth, barHeight, 2, g.colors.Primary, antialias)
-			vector.DrawFilledRect(screen, labelOffsetX, currOffsetY, cargo, barHeight, g.colors.Primary, antialias)
+			vector.StrokeRect(screen, float32(labelOffsetX), currOffsetY, barWidth, barHeight, 2, g.colors.Primary, antialias)
+			vector.DrawFilledRect(screen, float32(labelOffsetX), currOffsetY, cargo, barHeight, g.colors.Primary, antialias)
 		}
 	}
 }
 
 func (g *Game) DrawSystems(screen *ebiten.Image, systems []models.System) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
-	minX, maxX, minY, maxY := g.camera.GetWorldBounds(sw, sh, g.systemSize)
+	minX, maxX, minY, maxY := g.camera.GetWorldBounds(sw, sh)
 	for i := range systems {
 		// cull if it's offscreen
 		wx := float32(systems[i].X)
@@ -123,7 +91,7 @@ func (g *Game) DrawSystems(screen *ebiten.Image, systems []models.System) {
 
 func (g *Game) DrawSystem(screen *ebiten.Image, system models.System) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
-	sx, sy := g.camera.WorldToScreen(float64(system.X), float64(system.Y), sw, sh, g.systemSize)
+	sx, sy := g.camera.WorldToScreen(float64(system.X), float64(system.Y), sw, sh)
 
 	size := float32(1)
 	if g.camera.Zoom > .1 {
@@ -141,8 +109,8 @@ func (g *Game) DrawSystem(screen *ebiten.Image, system models.System) {
 		c = colornames.Lime
 	}
 
-	// vector.DrawFilledRect(screen, float32(sx), float32(sy), size, size, c, antialias)
-	vector.StrokeLine(screen, float32(sx), float32(sy), float32(sx+size), float32(sy+size), size, c, antialias)
+	vector.DrawFilledRect(screen, float32(sx), float32(sy), size, size, c, antialias)
+	// vector.StrokeLine(screen, float32(sx), float32(sy), float32(sx+size), float32(sy+size), size, c, antialias)
 	if g.camera.Zoom > showSystemLabelsAtZoom || currSystem == system.Symbol {
 		text.Draw(screen, fmt.Sprintf("%s (%s)", system.Symbol, system.Name), defaultFont, int(sx)+10.0, int(sy)+7, colornames.White)
 	}
@@ -150,7 +118,7 @@ func (g *Game) DrawSystem(screen *ebiten.Image, system models.System) {
 
 func (g *Game) DrawWaypoints(screen *ebiten.Image, waypoints []models.Waypoint) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
-	minX, maxX, minY, maxY := g.camera.GetWorldBounds(sw, sh, g.systemSize)
+	minX, maxX, minY, maxY := g.camera.GetWorldBounds(sw, sh)
 
 	for _, wp := range waypoints {
 
@@ -186,7 +154,7 @@ func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
 	}
 
 	// draw waypoint
-	sx, sy := g.camera.WorldToScreen(float64(waypoint.X), float64(waypoint.Y), sw, sh, g.systemSize)
+	sx, sy := g.camera.WorldToScreen(float64(waypoint.X), float64(waypoint.Y), sw, sh)
 	vector.DrawFilledCircle(screen, float32(sx), float32(sy), r*float32(g.camera.Zoom), c, antialias)
 
 	// render waypoint label
@@ -213,8 +181,8 @@ func (g *Game) DrawDistanceRings(screen *ebiten.Image) {
 	for i := 1.0; i < 9; i++ {
 		radius := i * 100.0
 
-		orbitX, orbitY := g.camera.WorldToScreen(centerX, centerY, sw, sh, g.systemSize)
-		scale, _, _ := g.camera.GetTransform(sw, sh, g.systemSize)
+		orbitX, orbitY := g.camera.WorldToScreen(centerX, centerY, sw, sh)
+		scale, _, _ := g.camera.GetTransform(sw, sh)
 
 		vector.StrokeCircle(
 			screen,
@@ -245,8 +213,8 @@ func (g *Game) DrawWaypointOrbit(screen *ebiten.Image, wp models.Waypoint) {
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 
-	orbitX, orbitY := g.camera.WorldToScreen(0.0, 0.0, sw, sh, g.systemSize)
-	scale, _, _ := g.camera.GetTransform(sw, sh, g.systemSize)
+	orbitX, orbitY := g.camera.WorldToScreen(0.0, 0.0, sw, sh)
+	scale, _, _ := g.camera.GetTransform(sw, sh)
 
 	vector.StrokeCircle(
 		screen,
