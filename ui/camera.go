@@ -16,7 +16,7 @@ func NewCamera2D() *Camera2D {
 	return &Camera2D{
 		CenterX: 0,
 		CenterY: 0,
-		Zoom:    1.2,
+		Zoom:    defaultSystemZoom,
 	}
 }
 

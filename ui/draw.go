@@ -155,10 +155,14 @@ func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
 
 	// draw waypoint
 	sx, sy := g.camera.WorldToScreen(float64(waypoint.X), float64(waypoint.Y), sw, sh)
-	vector.DrawFilledCircle(screen, float32(sx), float32(sy), r*float32(g.camera.Zoom), c, antialias)
+	if g.camera.Zoom < defaultSystemZoom {
+		vector.DrawFilledRect(screen, float32(sx), float32(sy), r, r, c, antialias)
+	} else {
+		vector.DrawFilledCircle(screen, float32(sx), float32(sy), r*float32(g.camera.Zoom), c, antialias)
+	}
 
 	// render waypoint label
-	if g.camera.Zoom > 1.0 {
+	if g.camera.Zoom >= showSystemModeDetailsZoomLevel {
 
 		textX := int(sx) + 10 + int(float64(r)*g.camera.Zoom) // shift text a bit right of the circle
 		textY := int(sy) - 1                                  // shift text a bit up
@@ -198,7 +202,7 @@ func (g *Game) DrawDistanceRings(screen *ebiten.Image) {
 }
 
 func (g *Game) DrawWaypointOrbits(screen *ebiten.Image, waypoints []models.Waypoint) {
-	if g.camera.Zoom < 1.0 {
+	if g.camera.Zoom < showSystemModeDetailsZoomLevel {
 		return
 	}
 	for i := range waypoints {

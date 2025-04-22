@@ -91,7 +91,11 @@ func (g *Game) Update() error {
 		// 2. Apply zoom
 		zoomFactor := 1 + scrollY*0.02
 		newZoom := g.camera.Zoom * zoomFactor
-		g.camera.Zoom = Clamp(newZoom, float64(minZoom), float64(maxZoom))
+		if g.mode == SystemMode {
+			g.camera.Zoom = Clamp(newZoom, float64(minSystemZoom), float64(maxSystemZoom))
+		} else {
+			g.camera.Zoom = Clamp(newZoom, float64(minGalaxyZoom), float64(maxGalaxyZoom))
+		}
 
 		// 3. World position under cursor after zoom
 		worldAfterX, worldAfterY := g.camera.ScreenToWorld(mouseScreenX, mouseScreenY, sw, sh)
@@ -164,7 +168,7 @@ func (g *Game) Update() error {
 		slog.Info("Switching to Galaxy Mode")
 		g.camera.LookAt(0, 0)
 		g.mode = GalaxyMode
-		g.camera.Zoom = minZoom
+		g.camera.Zoom = minGalaxyZoom
 	} else if inpututil.IsKeyJustReleased(ebiten.KeyS) {
 		slog.Info("Switching to System Mode")
 		g.camera.LookAt(0, 0)
@@ -173,7 +177,7 @@ func (g *Game) Update() error {
 	} else {
 		// update the camera mode based on zoom level
 
-		if g.mode == GalaxyMode && g.camera.Zoom > galaxyToSystemThresh {
+		if g.mode == GalaxyMode && g.camera.Zoom >= maxGalaxyZoom {
 			slog.Info("Switching to System View")
 			sw, sh := ebiten.WindowSize()
 
@@ -185,7 +189,7 @@ func (g *Game) Update() error {
 
 			// Step 2: Switch to system mode
 			g.mode = SystemMode
-			g.camera.Zoom = systemToGalaxyThresh
+			g.camera.Zoom = minGalaxyZoom
 			g.camera.LookAt(0, 0)
 
 			// Step 3: Figure out what world position (in system coords) lives at that screen pixel
@@ -194,7 +198,7 @@ func (g *Game) Update() error {
 
 			// Step 4: Offset camera so that system-local (0, 0) maps to that pixel
 			g.camera.LookAt(-wx, -wy)
-		} else if g.mode == SystemMode && g.camera.Zoom < systemToGalaxyThresh {
+		} else if g.mode == SystemMode && g.camera.Zoom <= minSystemZoom {
 			sw, sh := ebiten.WindowSize()
 
 			// get current screen position of the system
@@ -202,7 +206,7 @@ func (g *Game) Update() error {
 
 			// switch modes
 			g.mode = GalaxyMode
-			g.camera.Zoom = galaxyToSystemThresh
+			g.camera.Zoom = maxGalaxyZoom
 
 			// look at system in galaxy space
 			gx := systemCoords[currSystem][0]
@@ -218,9 +222,9 @@ func (g *Game) Update() error {
 	}
 
 	if g.mode == SystemMode {
-		g.colors.DistanceRings = fadeColorWithZoom(g.camera.Zoom, 0.75, 1.1, 0.1, .6, g.colors.Secondary)
-		g.colors.WaypointOrbit = fadeColorWithZoom(g.camera.Zoom, 0.9, 1.1, 0, .1, g.colors.Primary)
-		g.colors.WaypointLabelColor = fadeColorWithZoom(g.camera.Zoom, 1.0, 1.1, 0, 1, colornames.Silver)
+		g.colors.DistanceRings = fadeColorWithZoom(g.camera.Zoom, showSystemModeDetailsZoomLevel, defaultSystemZoom, 0.1, .6, g.colors.Secondary)
+		g.colors.WaypointOrbit = fadeColorWithZoom(g.camera.Zoom, showSystemModeDetailsZoomLevel, defaultSystemZoom, 0, .1, g.colors.Primary)
+		g.colors.WaypointLabelColor = fadeColorWithZoom(g.camera.Zoom, showSystemModeDetailsZoomLevel, defaultSystemZoom, 0, 1, colornames.Silver)
 	}
 
 	return nil

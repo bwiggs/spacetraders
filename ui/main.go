@@ -54,13 +54,14 @@ var defaultFont font.Face
 var hudFont font.Face
 
 const (
-	antialias              = false
-	systemToGalaxyThresh   = .15
-	galaxyToSystemThresh   = 4
-	defaultSystemZoom      = 1.1
-	minZoom                = 0.012
-	maxZoom                = 15.0
-	showSystemLabelsAtZoom = 0.4
+	antialias                      = false
+	defaultSystemZoom              = 0.95
+	minSystemZoom                  = 0.005
+	maxSystemZoom                  = 15.0
+	minGalaxyZoom                  = 0.011
+	maxGalaxyZoom                  = 4
+	showSystemLabelsAtZoom         = 0.4
+	showSystemModeDetailsZoomLevel = 0.5
 )
 
 var currSystem string
