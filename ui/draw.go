@@ -41,7 +41,7 @@ func (g *Game) DrawShip(screen *ebiten.Image, ship api.Ship) {
 
 	sx, sy := g.camera.WorldToScreen(pos.X, pos.Y, sw, sh)
 
-	vector.DrawFilledRect(screen, float32(sx), float32(sy), 4, 4, g.colors.Secondary, antialias)
+	vector.DrawFilledRect(screen, float32(sx), float32(sy), 4, 4, g.colors.Secondary, g.settings.antialias)
 
 	labelOffsetX := sx + 10.0
 	labelOffset := float32(11)
@@ -60,15 +60,15 @@ func (g *Game) DrawShip(screen *ebiten.Image, ship api.Ship) {
 
 		if ship.Fuel.Capacity > 0 {
 			fuel := float32(ship.Fuel.Current/ship.Fuel.Capacity) * barWidth
-			vector.StrokeRect(screen, float32(labelOffsetX), currOffsetY, barWidth, barHeight, 2, g.colors.Primary, antialias)
-			vector.DrawFilledRect(screen, float32(labelOffsetX), currOffsetY, fuel, barHeight, g.colors.Primary, antialias)
+			vector.StrokeRect(screen, float32(labelOffsetX), currOffsetY, barWidth, barHeight, 2, g.colors.Primary, g.settings.antialias)
+			vector.DrawFilledRect(screen, float32(labelOffsetX), currOffsetY, fuel, barHeight, g.colors.Primary, g.settings.antialias)
 			currOffsetY += labelOffset
 		}
 
 		if ship.Cargo.Capacity > 0 {
 			cargo := float32(ship.Cargo.Units/ship.Cargo.Capacity) * barWidth
-			vector.StrokeRect(screen, float32(labelOffsetX), currOffsetY, barWidth, barHeight, 2, g.colors.Primary, antialias)
-			vector.DrawFilledRect(screen, float32(labelOffsetX), currOffsetY, cargo, barHeight, g.colors.Primary, antialias)
+			vector.StrokeRect(screen, float32(labelOffsetX), currOffsetY, barWidth, barHeight, 2, g.colors.Primary, g.settings.antialias)
+			vector.DrawFilledRect(screen, float32(labelOffsetX), currOffsetY, cargo, barHeight, g.colors.Primary, g.settings.antialias)
 		}
 	}
 }
@@ -109,8 +109,8 @@ func (g *Game) DrawSystem(screen *ebiten.Image, system models.System) {
 		c = colornames.Lime
 	}
 
-	vector.DrawFilledRect(screen, float32(sx), float32(sy), size, size, c, antialias)
-	// vector.StrokeLine(screen, float32(sx), float32(sy), float32(sx+size), float32(sy+size), size, c, antialias)
+	vector.DrawFilledRect(screen, float32(sx), float32(sy), size, size, c, g.settings.antialias)
+	// vector.StrokeLine(screen, float32(sx), float32(sy), float32(sx+size), float32(sy+size), size, c, g.settings.antialias)
 	if g.camera.Zoom > showSystemLabelsAtZoom || currSystem == system.Symbol {
 		text.Draw(screen, fmt.Sprintf("%s (%s)", system.Symbol, system.Name), defaultFont, int(sx)+10.0, int(sy)+7, colornames.White)
 	}
@@ -156,9 +156,9 @@ func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
 	// draw waypoint
 	sx, sy := g.camera.WorldToScreen(float64(waypoint.X), float64(waypoint.Y), sw, sh)
 	if g.camera.Zoom < defaultSystemZoom {
-		vector.DrawFilledRect(screen, float32(sx), float32(sy), r, r, c, antialias)
+		vector.DrawFilledRect(screen, float32(sx), float32(sy), r, r, c, g.settings.antialias)
 	} else {
-		vector.DrawFilledCircle(screen, float32(sx), float32(sy), r*float32(g.camera.Zoom), c, antialias)
+		vector.DrawFilledCircle(screen, float32(sx), float32(sy), r*float32(g.camera.Zoom), c, g.settings.antialias)
 	}
 
 	// render waypoint label
@@ -195,7 +195,7 @@ func (g *Game) DrawDistanceRings(screen *ebiten.Image) {
 			float32(radius*scale),
 			1,
 			g.colors.DistanceRings,
-			antialias,
+			g.settings.antialias,
 		)
 	}
 
@@ -227,7 +227,7 @@ func (g *Game) DrawWaypointOrbit(screen *ebiten.Image, wp models.Waypoint) {
 		float32(wp.Dist*scale),
 		2,
 		g.colors.WaypointOrbit,
-		antialias,
+		g.settings.antialias,
 	)
 }
 

@@ -54,7 +54,6 @@ var defaultFont font.Face
 var hudFont font.Face
 
 const (
-	antialias                      = false
 	defaultSystemZoom              = 0.95
 	minSystemZoom                  = 0.005
 	maxSystemZoom                  = 15.0

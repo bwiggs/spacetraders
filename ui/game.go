@@ -31,6 +31,7 @@ type Game struct {
 }
 
 type Settings struct {
+	antialias          bool
 	showDistanceRings  bool
 	showOrbitRings     bool
 	showWaypointLabels bool
@@ -50,6 +51,7 @@ func NewGame(r *repo.Repo) *Game {
 		repo:         r,
 		cameraOffset: [2]float64{0, 0},
 		settings: Settings{
+			antialias:          true,
 			showDistanceRings:  true,
 			showOrbitRings:     true,
 			showWaypointLabels: true,
@@ -151,6 +153,10 @@ func (g *Game) Update() error {
 
 	if inpututil.IsKeyJustReleased(ebiten.KeyR) {
 		g.settings.showDistanceRings = !g.settings.showDistanceRings
+	}
+
+	if inpututil.IsKeyJustReleased(ebiten.KeyA) {
+		g.settings.antialias = !g.settings.antialias
 	}
 
 	if inpututil.IsKeyJustReleased(ebiten.KeyO) {
