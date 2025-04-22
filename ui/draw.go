@@ -111,7 +111,7 @@ func (g *Game) DrawSystem(screen *ebiten.Image, system models.System) {
 
 	vector.DrawFilledRect(screen, float32(sx), float32(sy), size, size, c, g.settings.antialias)
 	// vector.StrokeLine(screen, float32(sx), float32(sy), float32(sx+size), float32(sy+size), size, c, g.settings.antialias)
-	if g.camera.Zoom > showSystemLabelsAtZoom || currSystem == system.Symbol {
+	if g.camera.Zoom > showSystemModeDetailsZoomLevel || currSystem == system.Symbol {
 		text.Draw(screen, fmt.Sprintf("%s (%s)", system.Symbol, system.Name), defaultFont, int(sx)+10.0, int(sy)+7, colornames.White)
 	}
 }
@@ -146,11 +146,11 @@ func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
 		c = colornames.White
 	}
 
-	r := float32(1)
+	r := float32(2)
 	if waypoint.Type == "STAR" {
-		r = float32(4)
+		r = float32(5)
 	} else if waypoint.Type == "PLANET" {
-		r = float32(2)
+		r = float32(2.5)
 	}
 
 	// draw waypoint
@@ -158,7 +158,7 @@ func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
 	if g.camera.Zoom < defaultSystemZoom {
 		vector.DrawFilledRect(screen, float32(sx), float32(sy), r, r, c, g.settings.antialias)
 	} else {
-		vector.DrawFilledCircle(screen, float32(sx), float32(sy), r*float32(g.camera.Zoom), c, g.settings.antialias)
+		vector.DrawFilledCircle(screen, float32(sx), float32(sy), max(1, r*float32(g.camera.Zoom)), c, g.settings.antialias)
 	}
 
 	// render waypoint label
