@@ -3,7 +3,7 @@ MIGRATE=migrate -source file://db/migrations -database sqlite3://db/spacetraders
 .PHONY: all run api-spec migrate db-up db-down db-drop db-reset ui
 
 run:
-	go run *.go
+	go run cli/main.go
 
 generate:
 	go generate ./...

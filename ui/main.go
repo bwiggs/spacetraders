@@ -9,8 +9,9 @@ import (
 	"path"
 
 	"github.com/bwiggs/spacetraders-go/api"
+	"github.com/bwiggs/spacetraders-go/kernel"
 	"github.com/bwiggs/spacetraders-go/models"
-	"github.com/bwiggs/spacetraders-go/repo"
+	"github.com/bwiggs/spacetraders-go/tasks"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/lmittmann/tint"
 	"github.com/spf13/viper"
@@ -22,6 +23,10 @@ import (
 )
 
 func init() {
+
+	viper.SetEnvPrefix("ST")
+	viper.AutomaticEnv()
+
 	logHandler := tint.NewHandler(os.Stdout, &tint.Options{Level: slog.LevelDebug})
 	// logHandler := slog.NewJSONHandler(os.Stdout, nil)
 	logger := slog.New(logHandler)
@@ -74,30 +79,28 @@ var constellationColors map[string]color.Color
 
 func main() {
 
-	viper.SetEnvPrefix("ST")
-	viper.AutomaticEnv()
-
-	defaultFont = loadFont("ui/assets/IBMPlexMono-Medium.ttf", 12)
-	hudFont = loadFont("ui/assets/IBMPlexMono-Regular.ttf", 12)
-
-	r, err := repo.GetRepo()
+	kernel, err := kernel.New()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to create kernel", "err", err)
+		return
 	}
+
+	kernel.Start()
 
 	currSystem = viper.GetString("SYSTEM")
 
-	ships, err = r.GetFleet()
+	repo := kernel.Repo()
+	ships, err = repo.GetFleet()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	waypoints, err = r.GetWaypoints(currSystem)
+	waypoints, err = repo.GetWaypoints(currSystem)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	systems, err = r.GetSystems()
+	systems, err = repo.GetSystems()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -118,13 +121,18 @@ func main() {
 		waypoints[i].Dist = math.Hypot(dx, dy)
 	}
 
+	tasks.Start()
+
+	defaultFont = loadFont("ui/assets/IBMPlexMono-Medium.ttf", 12)
+	hudFont = loadFont("ui/assets/IBMPlexMono-Regular.ttf", 12)
+
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetWindowSize(2560, 1600)
 
 	ebiten.SetTPS(60)
 	ebiten.SetWindowTitle("spacetraders.io")
 	slog.Info("spacetraders.io - UI", "system", currSystem, "agent", viper.GetString("AGENT"))
-	if err := ebiten.RunGame(NewGame(r)); err != nil {
+	if err := ebiten.RunGame(NewGame(repo)); err != nil {
 		log.Fatal(err)
 	}
 }
