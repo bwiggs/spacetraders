@@ -22,7 +22,7 @@ const (
 
 // BehaviorNode defines the interface for behavior tree nodes.
 type BehaviorNode interface {
-	Tick(any) BehaviorStatus
+	Tick(Blackboard) BehaviorStatus
 }
 
 func printResult(node any, status BehaviorStatus) {
@@ -43,6 +43,7 @@ type Sequence struct {
 }
 
 // NewSequence creates a new Sequence node with the given children.
+// A sequence will fail if any child fails.
 func NewSequence(children ...BehaviorNode) *Sequence {
 	return &Sequence{children: children}
 }
@@ -91,7 +92,7 @@ type Inversion struct {
 	child BehaviorNode
 }
 
-func Invert(child BehaviorNode) *Inversion {
+func Not(child BehaviorNode) *Inversion {
 	return &Inversion{child}
 }
 

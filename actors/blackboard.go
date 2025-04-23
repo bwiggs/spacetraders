@@ -15,10 +15,6 @@ type Blackboard struct {
 	destination        string
 	purchaseMaxUnits   int
 
-	tradeMissionOrigin string
-	tradeMissionDest   string
-	tradeMissionGood   string
-
 	extractionWaypoint string
 
 	complete bool

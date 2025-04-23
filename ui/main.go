@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/bwiggs/spacetraders-go/api"
 	"github.com/bwiggs/spacetraders-go/kernel"
 	"github.com/bwiggs/spacetraders-go/models"
 	"github.com/bwiggs/spacetraders-go/tasks"
@@ -73,7 +72,6 @@ const (
 var currSystem string
 var waypoints []models.Waypoint
 var systems []models.System
-var ships []api.Ship
 var systemCoords map[string][]float64
 var constellationColors map[string]color.Color
 
@@ -90,10 +88,6 @@ func main() {
 	currSystem = viper.GetString("SYSTEM")
 
 	repo := kernel.Repo()
-	ships, err = repo.GetFleet()
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	waypoints, err = repo.GetWaypoints(currSystem)
 	if err != nil {
@@ -132,7 +126,7 @@ func main() {
 	ebiten.SetTPS(60)
 	ebiten.SetWindowTitle("spacetraders.io")
 	slog.Info("spacetraders.io - UI", "system", currSystem, "agent", viper.GetString("AGENT"))
-	if err := ebiten.RunGame(NewGame(repo)); err != nil {
+	if err := ebiten.RunGame(NewGame(kernel)); err != nil {
 		log.Fatal(err)
 	}
 }

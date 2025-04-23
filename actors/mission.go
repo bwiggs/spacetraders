@@ -20,7 +20,7 @@ const (
 )
 
 type Mission interface {
-	Execute(Blackboard)
+	Execute(*Blackboard)
 
 	AssignShip(MissionShipRole, *Ship)
 	GetShipRole(string) (MissionShipRole, bool)
@@ -95,7 +95,7 @@ func (m *BaseMission) AssignShip(role MissionShipRole, ship *Ship) {
 	m.roleShips[role] = ships
 }
 
-func (m *BaseMission) Execute(data Blackboard) {
+func (m *BaseMission) Execute(data *Blackboard) {
 	slog.Info("BaseMission: execute")
 }
 

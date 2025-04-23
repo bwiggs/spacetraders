@@ -19,7 +19,7 @@ type Point2D struct {
 	X, Y float64
 }
 
-func (g *Game) DrawShips(screen *ebiten.Image, ships []api.Ship) {
+func (g *Game) DrawShips(screen *ebiten.Image, ships []*api.Ship) {
 	// sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	// minX, maxX, minY, maxY := g.camera.GetWorldBounds(sw, sh)
 	for i := range ships {
@@ -32,7 +32,7 @@ func (g *Game) DrawShips(screen *ebiten.Image, ships []api.Ship) {
 	}
 }
 
-func (g *Game) DrawShip(screen *ebiten.Image, ship api.Ship) {
+func (g *Game) DrawShip(screen *ebiten.Image, ship *api.Ship) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 
 	origin := Point2D{X: float64(ship.Nav.Route.Origin.X), Y: float64(ship.Nav.Route.Origin.Y)}
@@ -51,7 +51,7 @@ func (g *Game) DrawShip(screen *ebiten.Image, ship api.Ship) {
 		text.Draw(screen, "ETA: "+formatDuration(eta), defaultFont, int(labelOffsetX), int(sy)+20, colornames.White)
 	}
 
-	showBars := true
+	showBars := false
 
 	if showBars {
 		barWidth := float32(70.0)
@@ -150,7 +150,7 @@ func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
 	if waypoint.Type == "STAR" {
 		r = float32(5)
 	} else if waypoint.Type == "ASTEROID" {
-		r = 1
+		r = 1.5
 	}
 
 	// draw waypoint
@@ -240,11 +240,12 @@ func (g *Game) DrawWaypointList(screen *ebiten.Image, wp []models.Waypoint) {
 	}
 }
 
-func (g *Game) DrawShipList(screen *ebiten.Image, ships []api.Ship) {
+func (g *Game) DrawShipList(screen *ebiten.Image, ships []*api.Ship) {
 	x := 10
 	y := 30
 	for i := range ships {
-		text.Draw(screen, ships[i].Symbol+" "+string(ships[i].Registration.Role), hudFont, x, y, colornames.Aqua)
+		label := fmt.Sprintf("%-10s %-10s %10s @ %-12s", ships[i].Symbol, string(ships[i].Registration.Role), ships[i].Nav.Status, ships[i].Nav.GetWaypointSymbol())
+		text.Draw(screen, label, hudFont, x, y, colornames.Aqua)
 		y += 12
 	}
 }

@@ -13,9 +13,10 @@ import (
 func UpdateFleet(client *api.Client, repo *repo.Repo) error {
 
 	page := 1
+	limit := 20
 	for {
 		slog.Info(fmt.Sprintf("updating ships: page %d", page), "page", page)
-		res, err := client.GetMyShips(context.TODO(), api.GetMyShipsParams{Page: api.NewOptInt(page), Limit: api.NewOptInt(20)})
+		res, err := client.GetMyShips(context.TODO(), api.GetMyShipsParams{Page: api.NewOptInt(page), Limit: api.NewOptInt(limit)})
 		if err != nil {
 			return err
 		}
@@ -27,6 +28,10 @@ func UpdateFleet(client *api.Client, repo *repo.Repo) error {
 		err = repo.UpsertFleet(res.Data)
 		if err != nil {
 			return err
+		}
+
+		if len(res.Data) < limit {
+			break
 		}
 
 		time.Sleep(500 * time.Millisecond)

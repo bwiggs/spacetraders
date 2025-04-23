@@ -15,7 +15,7 @@ func (m *TradeMission) AssignShip(role MissionShipRole, ship *Ship) {
 	m.BaseMission.AssignShip(role, ship)
 }
 
-func (m *TradeMission) Execute(data Blackboard) {
+func (m *TradeMission) Execute(data *Blackboard) {
 	shipRole, _ := m.GetShipRole(data.ship.symbol)
 	data.log = data.log.With("mission", "TradeMission", "role", shipRole)
 	data.repo = m.repo

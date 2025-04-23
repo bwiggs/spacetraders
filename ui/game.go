@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"log/slog"
 
+	"github.com/bwiggs/spacetraders-go/kernel"
 	"github.com/bwiggs/spacetraders-go/models"
 	"github.com/bwiggs/spacetraders-go/repo"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -28,6 +29,8 @@ type Game struct {
 	colors GameColors
 
 	settings Settings
+
+	kernel *kernel.Kernel
 }
 
 type Settings struct {
@@ -44,11 +47,12 @@ const (
 	GalaxyMode
 )
 
-func NewGame(r *repo.Repo) *Game {
+func NewGame(k *kernel.Kernel) *Game {
 	g := &Game{
 		camera:       NewCamera2D(),
 		mode:         SystemMode,
-		repo:         r,
+		kernel:       k,
+		repo:         k.Repo(),
 		cameraOffset: [2]float64{0, 0},
 		settings: Settings{
 			antialias:          true,
@@ -270,8 +274,8 @@ func (g *Game) DrawSystemUI(screen *ebiten.Image) {
 	}
 	g.DrawWaypoints(screen, waypoints)
 	// g.DrawWaypointList(screen, waypoints)
-	g.DrawShips(screen, ships)
-	g.DrawShipList(screen, ships)
+	g.DrawShips(screen, g.kernel.State().Ships)
+	g.DrawShipList(screen, g.kernel.State().Ships)
 }
 
 func (g *Game) DrawGalaxyUI(screen *ebiten.Image) {

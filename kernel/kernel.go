@@ -32,6 +32,7 @@ type Kernel struct {
 	logger *slog.Logger
 	client *api.Client
 	repo   *repo.Repo
+	state  *State
 }
 
 func New() (*Kernel, error) {
@@ -52,10 +53,22 @@ func New() (*Kernel, error) {
 		return nil, err
 	}
 
+	ships, err := r.GetFleet()
+	if err != nil {
+		slog.Error(errors.Wrap(err, "failed to get fleet").Error())
+		return nil, err
+	}
+
+	shipsBySymbol := make(map[string]*api.Ship)
+	for _, s := range ships {
+		shipsBySymbol[s.Symbol] = s
+	}
+
 	return &Kernel{
 		client: client,
 		repo:   r,
 		logger: logger,
+		state:  NewState(),
 	}, nil
 }
 
@@ -67,9 +80,13 @@ func (k *Kernel) Repo() *repo.Repo {
 	return k.repo
 }
 
+func (k *Kernel) State() *State {
+	return k.state
+}
+
 func (k *Kernel) Start() error {
 	tasks.Start()
-	go k.initBackgroundTasks(k.client)
+	// go k.initBackgroundTasks(k.client)
 
 	bot.Start(k.client, k.repo)
 	return nil
@@ -86,6 +103,21 @@ func (k *Kernel) initBackgroundTasks(client *api.Client) error {
 	tasks.SetInterval(func() {
 		tasks.LogAgentMetrics(client)
 	}, 1*time.Minute)
+
+	// tasks.SetInterval(func() {
+	// 	tasks.UpdateFleet(client, k.repo)
+	// 	ships, err := k.repo.GetFleet()
+	// 	if err != nil {
+	// 		slog.Error(errors.Wrap(err, "failed to get fleet").Error())
+	// 	}
+	// 	k.state.ShipsBySymbol = make(map[string]*api.Ship)
+	// 	k.state.Ships = []*api.Ship{}
+	// 	for _, s := range ships {
+	// 		k.state.ShipsBySymbol[s.Symbol] = &s
+	// 		k.state.Ships = append(k.state.Ships, &s)
+	// 	}
+
+	// }, 30*time.Second)
 
 	ScanMarkets := true
 	if ScanMarkets {

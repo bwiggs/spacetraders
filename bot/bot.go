@@ -99,16 +99,5 @@ func extractionMission(client *api.Client, r *repo.Repo, fleet map[string]*api.S
 
 func contractMission(client *api.Client, r *repo.Repo, fleet map[string]*api.Ship) {
 	commandShip := actors.NewShip(fleet["BWIGGS-1"], client)
-
-	contracts, err := client.GetContracts(context.TODO(), api.GetContractsParams{})
-	if err != nil {
-		slog.Error("failed to load contracts")
-	}
-
-	for _, c := range contracts.Data {
-		if c.Accepted && !c.Fulfilled {
-			commandShip.SetMission(actors.NewContractMission(client, r, &c))
-			break
-		}
-	}
+	commandShip.SetMission(actors.NewContractMission(client, r))
 }

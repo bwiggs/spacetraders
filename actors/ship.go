@@ -22,20 +22,23 @@ type Ship struct {
 }
 
 func NewShip(ship *api.Ship, client *api.Client) *Ship {
+
+	logger := slog.With("ship", ship.Symbol)
+
 	s := &Ship{
 		symbol:       ship.Symbol,
 		state:        ship,
 		client:       client,
-		log:          slog.With("ship", ship.Symbol),
+		log:          logger,
 		transferLock: sync.Mutex{},
 	}
 
 	go func(ship *Ship) {
+		data := Blackboard{ship: ship, log: logger}
 		for {
 			ship.Wait()
 			if ship.mission != nil {
-				data := Blackboard{ship: ship, log: slog.With("ship", ship.symbol)}
-				ship.mission.Execute(data)
+				ship.mission.Execute(&data)
 			} else {
 				ship.log.Info("idling - no current mission")
 			}
@@ -59,7 +62,7 @@ func (s *Ship) Wait() {
 		dur = cooldownTime
 		s.log.Info(fmt.Sprintf("%s: cooldown: %s", s.symbol, dur))
 	} else {
-		dur = 1500 * time.Millisecond
+		dur = 2 * time.Second
 	}
 
 	time.Sleep(dur)

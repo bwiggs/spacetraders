@@ -7,6 +7,7 @@ import (
 	"slices"
 	"time"
 
+	algos "github.com/bwiggs/spacetraders-go/algos/routing"
 	"github.com/bwiggs/spacetraders-go/api"
 	"github.com/bwiggs/spacetraders-go/bt"
 	"github.com/go-faster/errors"
@@ -131,6 +132,215 @@ func (a ConditionShipHasRemainingContractUnits) Tick(data bt.Blackboard) bt.Beha
 	}
 
 	return bt.Failure
+}
+
+type ConditionHasActiveContract struct{}
+
+func (a ConditionHasActiveContract) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionHasActiveContract: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.contract != nil && bb.contract.GetAccepted() {
+		slog.Debug("ConditionHasActiveContract: true", "contract", bb.contract.ID)
+		return bt.Success
+	}
+
+	slog.Debug("ConditionHasActiveContract: false")
+
+	return bt.Failure
+}
+
+type ConditionNilContract struct{}
+
+func (a ConditionNilContract) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionNilContract: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.contract == nil {
+		return bt.Success
+	}
+
+	return bt.Failure
+}
+
+type ConditionContractExpired struct{}
+
+func (a ConditionContractExpired) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		bb.Logger().Error("ConditionContractExpired: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.contract.IsExpired() {
+		return bt.Success
+	}
+
+	return bt.Failure
+}
+
+type ActionClearContract struct{}
+
+func (a ActionClearContract) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		bb.Logger().Error("ActionClearContract: expected a blackboard")
+		return bt.Running
+	}
+
+	bb.contract = nil
+
+	return bt.Failure
+}
+
+type ConditionContractClosed struct{}
+
+func (a ConditionContractClosed) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		bb.Logger().Error("ConditionContractClosed: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.contract.GetFulfilled() || bb.contract.IsExpired() {
+		return bt.Success
+	}
+
+	return bt.Failure
+}
+
+type ConditionContractFulfilled struct{}
+
+func (a ConditionContractFulfilled) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		bb.Logger().Error("ConditionContractFulfilled: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.contract.GetFulfilled() {
+		return bt.Success
+	}
+
+	return bt.Failure
+}
+
+type ConditionContractInProgress struct{}
+
+func (a ConditionContractInProgress) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		bb.Logger().Error("ConditionContractInProgress: expected a blackboard")
+		return bt.Running
+	}
+
+	if !bb.contract.IsExpired() && !bb.contract.GetFulfilled() && bb.contract.GetAccepted() {
+		return bt.Success
+	}
+
+	return bt.Failure
+}
+
+type ActionSetLatestContract struct{}
+
+func (a ActionSetLatestContract) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		bb.Logger().Error("ActionSetLatestContract: expected a blackboard")
+		return bt.Running
+	}
+
+	page := 1
+	limit := 20
+
+	// get the latest contract from the api via the list endpoint
+	res, err := bb.ship.client.GetContracts(context.TODO(), api.GetContractsParams{Page: api.NewOptInt(page), Limit: api.NewOptInt(limit)})
+	if err != nil {
+		bb.Logger().Error("ActionSetLatestContract: failed to get contracts", "error", err.Error())
+		return bt.Running
+	}
+
+	if len(res.Data) == 0 {
+		bb.Logger().Debug("ActionSetLatestContract: no contracts")
+		return bt.Running
+	}
+
+	if res.Meta.Total > limit {
+		bb.Logger().Error("ActionSetLatestContract: handle pagination for contracts,the latest contract is not on the first page of results")
+		return bt.Running
+	}
+
+	if bb.contract == nil {
+		bb.contract = NewContract(&res.Data[len(res.Data)-1])
+		bb.Logger().Debug("ActionSetLatestContract: new contract", "contract", bb.contract.ID)
+	}
+
+	return bt.Success
+}
+
+type ConditionHasPendingContract struct{}
+
+func (a ConditionHasPendingContract) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionHasPendingContract: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.contract != nil && !bb.contract.GetAccepted() {
+		slog.Debug("ConditionHasPendingContract: true", "contract", bb.contract.ID)
+		return bt.Success
+	}
+
+	slog.Debug("ConditionHasPendingContract: false")
+
+	return bt.Failure
+}
+
+type NegotiateNewContract struct{}
+
+func (a NegotiateNewContract) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("NegotiateNewContract: expected a blackboard")
+		return bt.Running
+	}
+
+	res, err := bb.ship.client.NegotiateContract(context.TODO(), api.NegotiateContractParams{ShipSymbol: bb.ship.symbol})
+	if err != nil {
+		bb.ship.log.Error(errors.Wrap(err, "NegotiateNewContract: Failed to negotiate contract").Error())
+		return bt.Running
+	}
+
+	bb.contract = NewContract(&res.Data.Contract)
+
+	return bt.Success
+}
+
+type AcceptContract struct{}
+
+func (a AcceptContract) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("NegotiateNewContract: expected a blackboard")
+		return bt.Running
+	}
+
+	res, err := bb.ship.client.AcceptContract(context.TODO(), api.AcceptContractParams{ContractId: bb.contract.ID})
+	if err != nil {
+		bb.ship.log.Error(errors.Wrap(err, "NegotiateNewContract: failed to accept contract").Error())
+		return bt.Running
+	}
+
+	bb.contract = NewContract(&res.Data.Contract)
+
+	return bt.Success
 }
 
 type ConditionContractIsFulfilled struct{}
@@ -342,11 +552,30 @@ func (a SetPurchaseFromContract) Tick(data bt.Blackboard) bt.BehaviorStatus {
 			return bt.Failure
 		}
 
-		wp := markets[0]
+		dest := markets[0]
 
-		slog.Info("SetPurchaseFromContract: setting waypoint to " + wp)
+		if bb.ship.CurrWaypoint() == dest {
+			slog.Info("SetPurchaseFromContract: at dest")
+			bb.destination = dest
+			return bt.Success
+		}
 
-		bb.destination = wp
+		slog.Info("SetPurchaseFromContract: setting waypoint to " + dest)
+
+		// figure out best path to the waypoint
+		slog.Info("SetPurchaseFromContract: finding best path", "origin", bb.ship.CurrWaypoint(), "dest", dest)
+		waypoints, err := bb.repo.GetWaypoints(bb.ship.CurrWaypoint())
+		if err != nil {
+			slog.Error(errors.Wrap(err, "SetPurchaseFromContract: GetWaypoints failed:").Error())
+			return bt.Failure
+		}
+		path := algos.FindPath(bb.ship.state, dest, waypoints)
+		if len(path) == 0 {
+			slog.Error("NavAction: no path found")
+			return bt.Failure
+		}
+
+		bb.destination = path[0]
 
 		return bt.Success
 	}
@@ -421,6 +650,22 @@ func (a NavAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	}
 
 	if !bb.ship.At(bb.destination) {
+
+		// figure out best path to the waypoint
+		waypoints, err := bb.repo.GetWaypoints(bb.ship.CurrWaypoint())
+		if err != nil {
+			slog.Error(errors.Wrap(err, "NavAction: GetWaypoints failed:").Error())
+			return bt.Failure
+		}
+
+		path := algos.FindPath(bb.ship.state, bb.destination, waypoints)
+		if len(path) == 0 {
+			slog.Error("NavAction: no path found")
+			return bt.Failure
+		}
+
+		bb.destination = path[0]
+
 		if err := bb.ship.Transit(bb.destination); err != nil {
 			bb.ship.log.Error(errors.Wrap(err, "Failed to transit ship").Error())
 			return bt.Failure
@@ -794,12 +1039,9 @@ func (a ConditionCargoIsFull) Tick(data any) bt.BehaviorStatus {
 		return bt.Running
 	}
 
-	// l := bb.ship.log.With("cargo.avail", bb.ship.AvailableCargoUnits())
 	if bb.ship.IsCargoFull() {
-		// l.Debug("ConditionCargoIsFull: success!")
 		return bt.Success
 	}
-	// l.Debug("ConditionCargoIsFull: fail!")
 	return bt.Failure
 }
 
@@ -899,22 +1141,24 @@ type FulfillContractAction struct{}
 func (a FulfillContractAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	bb, ok := data.(*Blackboard)
 	if !ok {
-		slog.Error("PurchaseContractGoodsAction: expected a blackboard")
+		slog.Error("FulfillContractAction: expected a blackboard")
 		return bt.Running
 	}
 
 	if bb.contract == nil {
-		slog.Error("ConditionContractTermsMet: blackboard: contract was nil")
+		slog.Error("FulfillContractAction: blackboard: contract was nil")
 		return bt.Running
 	}
 
 	res, err := bb.ship.client.FulfillContract(context.TODO(), api.FulfillContractParams{ContractId: bb.contract.ID})
 	if err != nil {
-		bb.ship.log.Error(errors.Wrap(err, "Failed to fulfill contract").Error())
+		bb.ship.log.Error(errors.Wrap(err, "FulfillContractAction: failed to fulfill contract").Error())
 		return bt.Running
 	}
 
-	bb.contract.Contract = &res.Data.Contract
+	slog.Debug("FulfillContractAction: success", "contract", res.Data.Contract.ID)
+
+	bb.contract = nil
 
 	return bt.Success
 }

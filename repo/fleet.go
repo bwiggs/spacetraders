@@ -34,19 +34,19 @@ func (r *Repo) UpsertFleet(ships []api.Ship) error {
 	return nil
 }
 
-func (r *Repo) GetFleet() ([]api.Ship, error) {
+func (r *Repo) GetFleet() ([]*api.Ship, error) {
 	bufs := [][]byte{}
-	if err := r.db.Select(&bufs, "SELECT data FROM fleet"); err != nil {
+	if err := r.db.Select(&bufs, "SELECT data FROM fleet order by symbol asc"); err != nil {
 		return nil, err
 	}
 
-	ships := make([]api.Ship, len(bufs))
+	ships := make([]*api.Ship, len(bufs))
 	for i := range bufs {
 		s := &api.Ship{}
 		if err := s.UnmarshalJSON(bufs[i]); err != nil {
 			return nil, err
 		}
-		ships[i] = *s
+		ships[i] = s
 	}
 	return ships, nil
 }

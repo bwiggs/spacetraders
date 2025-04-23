@@ -16,7 +16,7 @@ func (m *ExtractionMission) AssignShip(role MissionShipRole, ship *Ship) {
 	m.BaseMission.AssignShip(role, ship)
 }
 
-func (m *ExtractionMission) Execute(data Blackboard) {
+func (m *ExtractionMission) Execute(data *Blackboard) {
 	shipRole, _ := m.GetShipRole(data.ship.symbol)
 	data.log = data.log.With("mission", "ExtractionMission", "role", shipRole)
 	data.extractionWaypoint = m.extractionWaypoint
@@ -31,7 +31,7 @@ func NewExtractionMission(client *api.Client, repo *repo.Repo, extractionWaypoin
 	base.name = "ExtractionMission"
 
 	gotoExtractionPoint := bt.NewSequence(
-		bt.Invert(ConditionIsAtExtractionWaypoint{}),
+		bt.Not(ConditionIsAtExtractionWaypoint{}),
 		SetDestinationToExtractionWaypoint{},
 		NavigationAction(),
 	)
@@ -39,7 +39,7 @@ func NewExtractionMission(client *api.Client, repo *repo.Repo, extractionWaypoin
 	extract := bt.NewSequence(
 		ConditionIsAtExtractionWaypoint{},
 		JettisonNonSellableCargo{},
-		bt.Invert(ConditionCargoIsFull{}),
+		bt.Not(ConditionCargoIsFull{}),
 		ExtractAction{},
 	)
 
@@ -74,7 +74,7 @@ func NewExtractionMission(client *api.Client, repo *repo.Repo, extractionWaypoin
 	haulerBehavior := bt.NewSelector(
 		bt.NewSequence(
 			ConditionIsAtExtractionWaypoint{},
-			bt.Invert(ConditionCargoIsFull{}),
+			bt.Not(ConditionCargoIsFull{}),
 		),
 		sell,
 		gotoExtractionPoint,

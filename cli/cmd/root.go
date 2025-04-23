@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"log/slog"
+	"fmt"
+	"os"
 
-	"github.com/bwiggs/spacetraders-go/kernel"
 	"github.com/spf13/cobra"
 )
 
@@ -16,13 +16,17 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	kernel, err := kernel.New()
-	if err != nil {
-		slog.Error("failed to create kernel", "err", err)
-		return
+	// kernel, err := kernel.New()
+	// if err != nil {
+	// 	slog.Error("failed to create kernel", "err", err)
+	// 	return
+	// }
+
+	// kernel.Run()
+
+	// select {}
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
-
-	kernel.Run()
-
-	select {}
 }
