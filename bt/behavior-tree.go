@@ -26,7 +26,7 @@ type BehaviorNode interface {
 }
 
 func printResult(node any, status BehaviorStatus) {
-	return
+	// return
 	st := "Success"
 	switch status {
 	case 1:
@@ -92,17 +92,48 @@ type Inversion struct {
 	child BehaviorNode
 }
 
-func Not(child BehaviorNode) *Inversion {
+func Invert(child BehaviorNode) *Inversion {
 	return &Inversion{child}
 }
 
 // Tick executes each child node until one succeeds.
 func (i *Inversion) Tick(bb any) BehaviorStatus {
 	r := i.child.Tick(bb)
+	printResult(i.child, r)
+
 	if r == Success {
 		return Failure
 	} else if r == Failure {
 		return Success
 	}
+
 	return Running
+}
+
+func AlwaysSucceed(child BehaviorNode) BehaviorNode {
+	return &AlwaysSucceedNode{child: child}
+}
+
+type AlwaysSucceedNode struct {
+	child BehaviorNode
+}
+
+func (s *AlwaysSucceedNode) Tick(bb any) BehaviorStatus {
+	r := s.child.Tick(bb)
+	printResult(s.child, r)
+	return Success
+}
+
+func AlwaysFail(child BehaviorNode) BehaviorNode {
+	return &AlwaysFailNode{child: child}
+}
+
+type AlwaysFailNode struct {
+	child BehaviorNode
+}
+
+func (s *AlwaysFailNode) Tick(bb any) BehaviorStatus {
+	r := s.child.Tick(bb)
+	printResult(s.child, r)
+	return Failure
 }

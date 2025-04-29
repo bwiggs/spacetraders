@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"log/slog"
 
+	"github.com/bwiggs/spacetraders-go/api"
 	"github.com/bwiggs/spacetraders-go/kernel"
 	"github.com/bwiggs/spacetraders-go/models"
 	"github.com/bwiggs/spacetraders-go/repo"
@@ -75,7 +76,13 @@ func NewGame(k *kernel.Kernel) *Game {
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return outsideWidth, outsideHeight // or a fixed value like 1280x720
+}
 
+func (g *Game) WindowSize() (int, int) {
+	if ebiten.IsFullscreen() {
+		return ebiten.Monitor().Size()
+	}
+	return ebiten.WindowSize()
 }
 
 func (g *Game) Update() error {
@@ -87,10 +94,7 @@ func (g *Game) Update() error {
 	// Zoom with scroll
 	if _, scrollY := ebiten.Wheel(); scrollY != 0 {
 		// Get screen size and cursor position
-		sw, sh := ebiten.WindowSize()
-		if ebiten.IsFullscreen() {
-			sw, sh = ebiten.Monitor().Size()
-		}
+		sw, sh := g.WindowSize()
 
 		mx, my := ebiten.CursorPosition()
 		mouseScreenX := float64(mx)
@@ -119,7 +123,7 @@ func (g *Game) Update() error {
 	// Drag to pan
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
-		sw, sh := ebiten.WindowSize()
+		sw, sh := g.WindowSize()
 
 		if !g.dragging {
 			g.lastMousePos = [2]int{x, y}
@@ -194,7 +198,7 @@ func (g *Game) Update() error {
 
 		if g.mode == GalaxyMode && g.camera.Zoom > transitionGalaxyToSystemZoomLevel {
 			slog.Info("Switching to System View")
-			sw, sh := ebiten.WindowSize()
+			sw, sh := g.WindowSize()
 
 			// Step 1: Find where the galaxy coords appeared on screen
 			gx := systemCoords[currSystem][0]
@@ -214,7 +218,7 @@ func (g *Game) Update() error {
 			// Step 4: Offset camera so that system-local (0, 0) maps to that pixel
 			g.camera.LookAt(-wx, -wy)
 		} else if g.mode == SystemMode && g.camera.Zoom < transitionSystemToGalaxyZoomLevel {
-			sw, sh := ebiten.WindowSize()
+			sw, sh := g.WindowSize()
 
 			// get current screen position of the system
 			screenX, screenY := g.camera.WorldToScreen(0, 0, sw, sh)
@@ -252,13 +256,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 
 	if g.mode == SystemMode {
-		g.DrawWaypoint(screen, models.Waypoint{X: 0, Y: 0, Type: "STAR", Symbol: viper.GetString("SYSTEM")})
+		g.DrawWaypoint(screen, &models.Waypoint{X: 0, Y: 0, Type: "STAR", Symbol: viper.GetString("SYSTEM")})
 		g.DrawSystemUI(screen)
 	} else {
 		g.DrawGalaxyUI(screen)
 	}
 
 	// g.DrawContractStatus(screen, nil)
+	g.DrawCredits(screen, credits)
+	g.DrawContracts(screen, []api.Contract{*contract})
 
 	mx, my := ebiten.CursorPosition()
 	dbg := fmt.Sprintf("%s | TPS: %.2f | ZOOM: %.3f | R:%dx%d | M:%dx%d", viper.GetString("SYSTEM"), ebiten.ActualTPS(), g.camera.Zoom, sw, sh, mx, my)
@@ -274,8 +280,8 @@ func (g *Game) DrawSystemUI(screen *ebiten.Image) {
 	}
 	g.DrawWaypoints(screen, waypoints)
 	// g.DrawWaypointList(screen, waypoints)
-	g.DrawShips(screen, g.kernel.State().Ships)
-	g.DrawShipList(screen, g.kernel.State().Ships)
+	g.DrawShips(screen, ships)
+	g.DrawShipList(screen, ships)
 }
 
 func (g *Game) DrawGalaxyUI(screen *ebiten.Image) {

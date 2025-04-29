@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"log/slog"
 
 	"github.com/bwiggs/spacetraders-go/client"
 	"github.com/bwiggs/spacetraders-go/repo"
@@ -19,7 +20,7 @@ var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "updates local data for systems, markets and shipyards.",
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := client.Client()
+		client, err := client.GetClient()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -45,6 +46,8 @@ var updateCmd = &cobra.Command{
 		switch args[0] {
 		case "all":
 			fallthrough
+		case "agents":
+			err = tasks.UpdateAgents(client, r)
 		case "system":
 			err = tasks.ScanSystem(client, r, target)
 		case "markets":
@@ -54,6 +57,7 @@ var updateCmd = &cobra.Command{
 		case "shipyard":
 			err = tasks.ScanShipyard(client, r, target)
 		case "shipyards":
+			slog.Info("scan shipyards", "system", target)
 			err = tasks.ScanShipyards(client, r, target)
 		case "systems":
 			err = tasks.UpdateSystems(client, r)
@@ -70,7 +74,7 @@ var updateCmd = &cobra.Command{
 }
 
 func updateSystemData(system string) error {
-	client, err := client.Client()
+	client, err := client.GetClient()
 	if err != nil {
 		return err
 	}

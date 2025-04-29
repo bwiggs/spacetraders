@@ -11,13 +11,13 @@ import (
 )
 
 type ContractManager struct {
-	client *api.Client
+	client api.Invoker
 
 	Contract api.Contract
 	Ships    []*ShipAssignment
 }
 
-func NewContractManager(client *api.Client, contract api.Contract) *ContractManager {
+func NewContractManager(client api.Invoker, contract api.Contract) *ContractManager {
 	return &ContractManager{
 		client: client,
 

@@ -7,5 +7,7 @@ CREATE TABLE systems (
     x INT NOT NULL,
     y INT NOT NULL,
 
+    json JSONB DEFAULT null,
+
     PRIMARY KEY (symbol)
 );

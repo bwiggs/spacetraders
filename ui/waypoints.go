@@ -3,6 +3,7 @@ package main
 import (
 	"image/color"
 
+	"github.com/bwiggs/spacetraders-go/models"
 	"golang.org/x/image/colornames"
 )
 
@@ -19,4 +20,24 @@ func init() {
 	WaypointTypeColors["ASTEROID"] = colornames.Gray
 	WaypointTypeColors["ASTEROID_BASE"] = colornames.Red
 	WaypointTypeColors["JUMP_GATE"] = colornames.Lime
+}
+
+type Waypoint struct {
+	*models.Waypoint
+	X        int
+	Y        int
+	Type     string
+	Label    string
+	Sublabel string
+}
+
+func NewWaypoint(w *models.Waypoint) *Waypoint {
+	return &Waypoint{
+		Waypoint: w,
+		X:        int(w.X),
+		Y:        int(w.Y),
+		Label:    w.Symbol,
+		Type:     w.Type,
+		Sublabel: w.Type,
+	}
 }

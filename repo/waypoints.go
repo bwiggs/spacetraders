@@ -4,6 +4,7 @@ import (
 	"github.com/bwiggs/spacetraders-go/api"
 	"github.com/bwiggs/spacetraders-go/models"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/pkg/errors"
 )
 
 func (r *Repo) UpsertWaypoints(wps []api.Waypoint) error {
@@ -11,7 +12,7 @@ func (r *Repo) UpsertWaypoints(wps []api.Waypoint) error {
 	if err != nil {
 		return err
 	}
-	upsertWaypoint, err := tx.Prepare("INSERT OR REPLACE INTO waypoints (symbol, type, x, y) values (?, ?, ?, ?);")
+	upsertWaypoint, err := tx.Prepare("INSERT OR REPLACE INTO waypoints (symbol, type, x, y, json) values (?, ?, ?, ?, ?);")
 	if err != nil {
 		return err
 	}
@@ -31,7 +32,11 @@ func (r *Repo) UpsertWaypoints(wps []api.Waypoint) error {
 
 	for _, wp := range wps {
 		// upsert Market waypoints
-		_, err = upsertWaypoint.Exec(wp.Symbol, wp.Type, wp.X, wp.Y)
+		json, err := wp.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		_, err = upsertWaypoint.Exec(wp.Symbol, wp.Type, wp.X, wp.Y, json)
 		if err != nil {
 			return err
 		}
@@ -54,30 +59,85 @@ func (r *Repo) UpsertWaypoints(wps []api.Waypoint) error {
 	return nil
 }
 
-func (r *Repo) GetSystemWaypointsByTrait(system, trait string) ([]string, error) {
-	rows, err := r.db.Query("select distinct waypoint from waypoints_traits wt where wt.trait = ?", trait)
+func (r *Repo) WaypointHasTrait(waypointSymbol, trait string) (bool, error) {
+	sql := `SELECT 1 FROM waypoints_traits wt WHERE wt.waypoint = ? AND wt.trait = ?`
+
+	rows, err := r.db.Query(sql, waypointSymbol, trait)
 	if err != nil {
-		return nil, err
+		return false, errors.Wrap(err, "WaypointHasTrait: query failed")
 	}
 	defer rows.Close()
-	symbols := []string{}
+
+	return rows.Next(), nil
+}
+
+func (r *Repo) GetSystemWaypointsByTrait(system, trait string) ([]*models.Waypoint, error) {
+	sql := `select json 
+	from waypoints 
+	join waypoints_traits wt on wt.waypoint = waypoints.symbol 
+	where wt.trait = ? AND waypoints.symbol LIKE ?`
+
+	rows, err := r.db.Query(sql, trait, system+"%")
+	if err != nil {
+		return nil, errors.Wrap(err, "GetSystemWaypointsByTrait: failed to query waypoints")
+	}
+	defer rows.Close()
+
+	waypoints := []*models.Waypoint{}
+
 	for rows.Next() {
-		var symbol string
-		err = rows.Scan(&symbol)
+		buf := []byte{}
+
+		err = rows.Scan(&buf)
 		if err != nil {
+			return nil, errors.Wrap(err, "GetSystemWaypointsByTrait: failed to scan sql response")
+		}
+
+		wp := api.Waypoint{}
+		if err := wp.UnmarshalJSON(buf); err != nil {
+			return nil, errors.Wrap(err, "GetSystemWaypointsByTrait: failed to unmarshal waypoint")
+		}
+		waypoints = append(waypoints, models.NewWaypoint(&wp))
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, errors.Wrap(err, "GetSystemWaypointsByTrait: row err:")
+	}
+
+	return waypoints, nil
+}
+
+func (r *Repo) GetWaypoints(system string) ([]*models.Waypoint, error) {
+	waypoints := []*models.Waypoint{}
+
+	waypointjson := [][]byte{}
+	if err := r.db.Select(&waypointjson, `SELECT json FROM waypoints`); err != nil {
+		return nil, err
+	}
+	for _, j := range waypointjson {
+		var wp api.Waypoint
+		if err := wp.UnmarshalJSON(j); err != nil {
 			return nil, err
 		}
-		symbols = append(symbols, symbol)
+		waypoints = append(waypoints, models.NewWaypoint(&wp))
 	}
-	err = rows.Err()
+
+	return waypoints, nil
+}
+
+func (r *Repo) GetNonOrbitalWaypoints(system string) ([]*models.Waypoint, error) {
+	wps, err := r.GetWaypoints(system)
 	if err != nil {
 		return nil, err
 	}
-	return symbols, nil
-}
 
-func (r *Repo) GetWaypoints(system string) ([]models.Waypoint, error) {
-	waypoints := []models.Waypoint{}
-	err := r.db.Select(&waypoints, "SELECT * FROM waypoints")
-	return waypoints, err
+	waypoints := []*models.Waypoint{}
+	for _, wp := range wps {
+		if wp.Orbits.Value == "" {
+			waypoints = append(waypoints, wp)
+		}
+	}
+
+	return waypoints, nil
 }

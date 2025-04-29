@@ -10,32 +10,62 @@ import (
 	algos "github.com/bwiggs/spacetraders-go/algos/routing"
 	"github.com/bwiggs/spacetraders-go/api"
 	"github.com/bwiggs/spacetraders-go/bt"
+	"github.com/bwiggs/spacetraders-go/tasks"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/go-faster/errors"
+	"github.com/spf13/viper"
 )
 
 func NavigationAction() *bt.Selector {
 	return bt.NewSelector(
-		ConditionIsAtNavDest{},
-		CheckInRouteToDestination{},
 		bt.NewSequence(
-			RefuelAction{},
-			OrbitAction{},
-			NavAction{},
+			ConditionIsAtNavDest{},
+		),
+		bt.NewSelector(
+			bt.NewSequence(
+				ConditionWaypointHasFuel{},
+				bt.Invert(ConditionShipFuelFull{}),
+				bt.AlwaysFail(RefuelAction{}),
+			),
+			bt.NewSequence(
+				ActionUpdateMarkets(),
+				OrbitAction{},
+				NavAction{},
+			),
 		),
 	)
 }
 
-type CheckInRouteToDestination struct{}
+func ActionUpdateMarkets() *bt.Sequence {
+	return bt.NewSequence(
+		bt.AlwaysSucceed(
+			bt.NewSequence(
+				NewConditionAtWaypointWithTrait("MARKETPLACE"),
+				ActionDock{},
+				ActionScanMarket{},
+			),
+		),
+		bt.AlwaysSucceed(
+			bt.NewSequence(
+				NewConditionAtWaypointWithTrait("SHIPYARD"),
+				ActionDock{},
+				ActionScanShipyard{},
+			),
+		),
+	)
+}
 
-func (a CheckInRouteToDestination) Tick(data bt.Blackboard) bt.BehaviorStatus {
+type ConditionInTransitToDest struct{}
+
+func (a ConditionInTransitToDest) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	bb, ok := data.(*Blackboard)
 	if !ok {
-		slog.Error("CheckInRouteToDestination: expected a blackboard")
+		slog.Error("ConditionInTransitToDest: expected a blackboard")
 		return bt.Running
 	}
 
 	if bb.ship == nil {
-		slog.Error("CheckInRouteToDestination: blackboard: ship was nil")
+		slog.Error("ConditionInTransitToDest: blackboard: ship was nil")
 		return bt.Running
 	}
 
@@ -45,6 +75,58 @@ func (a CheckInRouteToDestination) Tick(data bt.Blackboard) bt.BehaviorStatus {
 
 	if bb.destination == string(bb.ship.state.Nav.Route.Destination.Symbol) {
 		return bt.Running
+	}
+
+	return bt.Failure
+}
+
+type ConditionShipFuelFull struct{}
+
+func (a ConditionShipFuelFull) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionShipFuelFull: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.ship == nil {
+		slog.Error("ConditionShipFuelFull: blackboard: ship was nil")
+		return bt.Running
+	}
+
+	if bb.ship.IsFuelFull() {
+		return bt.Success
+	}
+
+	return bt.Failure
+}
+
+type ConditionWaypointHasFuel struct{}
+
+func (a ConditionWaypointHasFuel) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionWaypointHasFuel: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.ship == nil {
+		slog.Error("ConditionWaypointHasFuel: blackboard: ship was nil")
+		return bt.Running
+	}
+
+	wp := bb.ship.CurrWaypoint()
+
+	bb.log.Debug("ConditionWaypointHasFuel: checking waypoint for fuel", "waypoint", wp)
+
+	hasFuel, err := bb.repo.WaypointHasGood(wp, "FUEL")
+	if err != nil {
+		slog.Error(errors.Wrap(err, "ConditionWaypointHasFuel: failed to check waypoint for fuel").Error())
+		return bt.Running
+	}
+
+	if hasFuel {
+		return bt.Success
 	}
 
 	return bt.Failure
@@ -178,7 +260,7 @@ func (a ConditionContractExpired) Tick(data bt.Blackboard) bt.BehaviorStatus {
 		return bt.Running
 	}
 
-	if bb.contract.IsExpired() {
+	if bb.contract != nil && bb.contract.IsExpired() {
 		return bt.Success
 	}
 
@@ -207,6 +289,8 @@ func (a ConditionContractClosed) Tick(data bt.Blackboard) bt.BehaviorStatus {
 		bb.Logger().Error("ConditionContractClosed: expected a blackboard")
 		return bt.Running
 	}
+
+	bb.log.Debug("ConditionContractClosed: status", "fulfilled", bb.contract.GetFulfilled(), "expired", bb.contract.IsExpired())
 
 	if bb.contract.GetFulfilled() || bb.contract.IsExpired() {
 		return bt.Success
@@ -240,7 +324,7 @@ func (a ConditionContractInProgress) Tick(data bt.Blackboard) bt.BehaviorStatus 
 		return bt.Running
 	}
 
-	if !bb.contract.IsExpired() && !bb.contract.GetFulfilled() && bb.contract.GetAccepted() {
+	if bb.contract != nil && !bb.contract.IsExpired() && !bb.contract.GetFulfilled() && bb.contract.GetAccepted() {
 		return bt.Success
 	}
 
@@ -256,28 +340,14 @@ func (a ActionSetLatestContract) Tick(data bt.Blackboard) bt.BehaviorStatus {
 		return bt.Running
 	}
 
-	page := 1
-	limit := 20
-
-	// get the latest contract from the api via the list endpoint
-	res, err := bb.ship.client.GetContracts(context.TODO(), api.GetContractsParams{Page: api.NewOptInt(page), Limit: api.NewOptInt(limit)})
+	contract, err := tasks.GetLatestContract(bb.ship.client)
 	if err != nil {
-		bb.Logger().Error("ActionSetLatestContract: failed to get contracts", "error", err.Error())
-		return bt.Running
-	}
-
-	if len(res.Data) == 0 {
-		bb.Logger().Debug("ActionSetLatestContract: no contracts")
-		return bt.Running
-	}
-
-	if res.Meta.Total > limit {
-		bb.Logger().Error("ActionSetLatestContract: handle pagination for contracts,the latest contract is not on the first page of results")
+		bb.Logger().Error(errors.Wrap(err, "ActionSetLatestContract: failed to get latest contract").Error())
 		return bt.Running
 	}
 
 	if bb.contract == nil {
-		bb.contract = NewContract(&res.Data[len(res.Data)-1])
+		bb.contract = NewContract(contract)
 		bb.Logger().Debug("ActionSetLatestContract: new contract", "contract", bb.contract.ID)
 	}
 
@@ -366,6 +436,56 @@ func (a ConditionContractIsFulfilled) Tick(data bt.Blackboard) bt.BehaviorStatus
 	return bt.Failure
 }
 
+type ConditionAtMarketplace struct{}
+
+func (a ConditionAtMarketplace) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionAtMarketplace: expected a blackboard")
+		return bt.Running
+	}
+
+	loc := bb.ship.CurrWaypoint()
+	isMarketplace, err := bb.repo.WaypointHasTrait(loc, "MARKETPLACE")
+	if err != nil {
+		return bt.Running
+	}
+
+	if isMarketplace {
+		return bt.Success
+	}
+
+	return bt.Failure
+}
+
+type ConditionAtWaypointWithTrait struct {
+	trait string
+}
+
+func (a ConditionAtWaypointWithTrait) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionAtWaypointWithTrait: expected a blackboard")
+		return bt.Running
+	}
+
+	loc := bb.ship.CurrWaypoint()
+	hasTrait, err := bb.repo.WaypointHasTrait(loc, a.trait)
+	if err != nil {
+		return bt.Running
+	}
+
+	if hasTrait {
+		return bt.Success
+	}
+
+	return bt.Failure
+}
+
+func NewConditionAtWaypointWithTrait(trait string) *ConditionAtWaypointWithTrait {
+	return &ConditionAtWaypointWithTrait{trait: trait}
+}
+
 type ConditionIsAtExtractionWaypoint struct{}
 
 func (a ConditionIsAtExtractionWaypoint) Tick(data bt.Blackboard) bt.BehaviorStatus {
@@ -427,7 +547,7 @@ func (a SetDestinationToBestTradeMarketSale) Tick(data bt.Blackboard) bt.Behavio
 
 	trades, err := bb.repo.FindMarketTrades()
 	if err != nil {
-		l.Error(err.Error())
+		l.Error(errors.Wrap(err, "SetDestinationToBestTradeMarketSale: FindMarketTrades failed:").Error())
 		return bt.Running
 	}
 
@@ -531,7 +651,7 @@ func (a SetPurchaseFromContract) Tick(data bt.Blackboard) bt.BehaviorStatus {
 
 	for _, d := range bb.contract.Terms.Deliver {
 		remaining := d.UnitsRequired - d.UnitsFulfilled
-		if d.UnitsRequired-d.UnitsFulfilled == 0 {
+		if remaining == 0 {
 			continue
 		}
 
@@ -541,41 +661,57 @@ func (a SetPurchaseFromContract) Tick(data bt.Blackboard) bt.BehaviorStatus {
 
 		// SET THE WAYPOINT TO BUY THE GOOD FROM
 
-		markets, err := bb.repo.FindExportWaypointsForGood(d.TradeSymbol)
+		markets, err := bb.repo.FindBuyWaypointsForGood(d.TradeSymbol)
 		if err != nil {
 			slog.Error(errors.Wrap(err, "SetPurchaseFromContract: FindMarketsWithGoods failed:").Error())
-			return bt.Failure
+			return bt.Running
 		}
 
 		if len(markets) == 0 {
-			slog.Warn("no markets to purchase " + d.TradeSymbol + "from")
-			return bt.Failure
+			slog.Warn("no markets available: " + d.TradeSymbol)
+			return bt.Running
 		}
 
-		dest := markets[0]
-
-		if bb.ship.CurrWaypoint() == dest {
-			slog.Info("SetPurchaseFromContract: at dest")
-			bb.destination = dest
-			return bt.Success
+		for _, m := range markets {
+			if m == bb.ship.CurrWaypoint() {
+				slog.Info("SetPurchaseFromContract: already at dest", "dest", m)
+				bb.destination = m
+				return bt.Success
+			}
 		}
-
-		slog.Info("SetPurchaseFromContract: setting waypoint to " + dest)
 
 		// figure out best path to the waypoint
-		slog.Info("SetPurchaseFromContract: finding best path", "origin", bb.ship.CurrWaypoint(), "dest", dest)
-		waypoints, err := bb.repo.GetWaypoints(bb.ship.CurrWaypoint())
+		origin := bb.ship.CurrWaypoint()
+		slog.Debug("SetPurchaseFromContract: finding best path/dest for good", "origin", origin)
+		waypoints, err := bb.repo.GetWaypoints(bb.ship.System())
 		if err != nil {
 			slog.Error(errors.Wrap(err, "SetPurchaseFromContract: GetWaypoints failed:").Error())
-			return bt.Failure
-		}
-		path := algos.FindPath(bb.ship.state, dest, waypoints)
-		if len(path) == 0 {
-			slog.Error("NavAction: no path found")
-			return bt.Failure
+			return bt.Running
 		}
 
-		bb.destination = path[0]
+		market := markets[0]
+		cost, path := algos.FindPath(bb.ship.state, market, waypoints)
+		bb.log.Debug("SetPurchaseFromContract: found path to market", "origin", origin, "dest", market, "path", path, "cost", cost)
+		if len(markets) > 1 {
+			for i := 1; i < len(markets); i++ {
+				c, p := algos.FindPath(bb.ship.state, markets[1], waypoints)
+				bb.log.Debug("SetPurchaseFromContract: found path to market", "origin", origin, "dest", markets[1], "path", p, "cost", c)
+				if c < cost {
+					cost = c
+					path = p
+					market = markets[i]
+				}
+			}
+		}
+
+		if len(path) == 0 {
+			slog.Error("SetPurchaseFromContract: no paths found for good")
+			return bt.Running
+		}
+
+		bb.log.Debug("SetPurchaseFromContract: setting destination", "origin", origin, "dest", market, "path", path, "cost", cost)
+
+		bb.destination = path[1]
 
 		return bt.Success
 	}
@@ -598,6 +734,32 @@ func (a ConditionIsAtNavDest) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	}
 
 	if bb.destination == bb.ship.state.Nav.Route.Destination.Symbol {
+		return bt.Success
+	}
+
+	return bt.Failure
+}
+
+type ConditionIsAtContractDestination struct{}
+
+func (a ConditionIsAtContractDestination) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionIsAtContractDestination: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.contract == nil {
+		slog.Error("ConditionIsAtContractDestination: blackboard: contract was nil")
+		return bt.Running
+	}
+
+	if len(bb.contract.Contract.Terms.Deliver) > 1 {
+		slog.Error("ConditionIsAtContractDestination: contract has multiple destinations")
+		return bt.Running
+	}
+
+	if bb.ship.CurrWaypoint() == bb.contract.Contract.Terms.Deliver[0].DestinationSymbol {
 		return bt.Success
 	}
 
@@ -649,34 +811,37 @@ func (a NavAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
 		return bt.Running
 	}
 
-	if !bb.ship.At(bb.destination) {
-
-		// figure out best path to the waypoint
-		waypoints, err := bb.repo.GetWaypoints(bb.ship.CurrWaypoint())
-		if err != nil {
-			slog.Error(errors.Wrap(err, "NavAction: GetWaypoints failed:").Error())
-			return bt.Failure
-		}
-
-		path := algos.FindPath(bb.ship.state, bb.destination, waypoints)
-		if len(path) == 0 {
-			slog.Error("NavAction: no path found")
-			return bt.Failure
-		}
-
-		bb.destination = path[0]
-
-		if err := bb.ship.Transit(bb.destination); err != nil {
-			bb.ship.log.Error(errors.Wrap(err, "Failed to transit ship").Error())
-			return bt.Failure
-		}
-	}
-
 	if time.Until(bb.ship.state.Nav.Route.Arrival) > 0 {
 		return bt.Running
 	}
 
-	return bt.Success
+	if bb.ship.At(bb.destination) {
+		return bt.Success
+	}
+
+	// figure out best path to the waypoint
+	waypoints, err := bb.repo.GetWaypoints(viper.GetString("SYSTEM"))
+	if err != nil {
+		slog.Error(errors.Wrap(err, "NavAction: GetWaypoints failed:").Error())
+		return bt.Failure
+	}
+
+	cost, path := algos.FindPath(bb.ship.state, bb.destination, waypoints)
+	if len(path) == 0 {
+		slog.Error("NavAction: no path found")
+		return bt.Failure
+	}
+
+	bb.log.Debug("NavAction: found path to market", "origin", bb.ship.CurrWaypoint(), "dest", bb.destination, "path", path, "cost", cost)
+
+	bb.destination = path[1]
+
+	if err := bb.ship.Transit(bb.destination); err != nil {
+		bb.ship.log.Error(errors.Wrap(err, "Failed to transit ship").Error())
+		return bt.Failure
+	}
+
+	return bt.Running
 }
 
 type PurchaseAction struct {
@@ -767,9 +932,9 @@ func (a OrbitAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	return bt.Success
 }
 
-type DockAction struct{}
+type ActionDock struct{}
 
-func (a DockAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
+func (a ActionDock) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	bb, ok := data.(*Blackboard)
 	if !ok {
 		slog.Error("DockAction: expected a blackboard")
@@ -781,6 +946,56 @@ func (a DockAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
 			bb.ship.log.Error(errors.Wrap(err, "Failed to dock ship").Error())
 			return bt.Running
 		}
+	}
+
+	return bt.Success
+}
+
+type ActionScanMarket struct{}
+
+func (a ActionScanMarket) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ActionScanMarket: expected a blackboard")
+		return bt.Running
+	}
+
+	cwp := bb.ship.CurrWaypoint()
+	bb.ship.log.Info("ActionScanMarket: "+cwp, "waypoint", cwp)
+	res, err := bb.ship.client.GetMarket(context.TODO(), api.GetMarketParams{SystemSymbol: cwp[:7], WaypointSymbol: cwp})
+	if err != nil {
+		bb.ship.log.Error(errors.Wrap(err, "ActionScanMarket: Failed to scan market").Error())
+		return bt.Running
+	}
+
+	if err := bb.repo.UpsertMarket(res.Data); err != nil {
+		bb.ship.log.Error(errors.Wrap(err, "ActionScanMarket: Failed to upsert market").Error())
+		return bt.Running
+	}
+
+	return bt.Success
+}
+
+type ActionScanShipyard struct{}
+
+func (a ActionScanShipyard) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ActionScanShipyard: expected a blackboard")
+		return bt.Running
+	}
+
+	cwp := bb.ship.CurrWaypoint()
+	bb.ship.log.Info("ActionScanShipyard: "+cwp, "waypoint", cwp)
+	res, err := bb.ship.client.GetShipyard(context.TODO(), api.GetShipyardParams{SystemSymbol: cwp[:7], WaypointSymbol: cwp})
+	if err != nil {
+		bb.ship.log.Error(errors.Wrap(err, "ActionScanShipyard: Failed to scan market").Error())
+		return bt.Running
+	}
+
+	if err := bb.repo.UpsertShipyard(res.Data); err != nil {
+		bb.ship.log.Error(errors.Wrap(err, "ActionScanShipyard: Failed to upsert market").Error())
+		return bt.Running
 	}
 
 	return bt.Success
@@ -867,25 +1082,25 @@ func (a ExtractAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	return bt.Running
 }
 
-type SellCargoAction struct{}
+type ActionSellCargo struct{}
 
-func (a SellCargoAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
+func (a ActionSellCargo) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	bb, ok := data.(*Blackboard)
 	if !ok {
-		bb.Logger().Error("SellCargoAction: expected a blackboard")
+		bb.Logger().Error("ActionSellCargo: expected a blackboard")
 		return bt.Running
 	}
 
 	if err := bb.ship.SellCargo(); err != nil {
-		bb.Logger().Error(errors.Wrap(err, "Failed to sell cargo").Error())
+		bb.Logger().Error(errors.Wrap(err, "ActionSellCargo: Failed to sell cargo").Error())
 		return bt.Running
 	}
 	return bt.Success
 }
 
-type BuyAction struct{}
+type ActionBuy struct{}
 
-func (a BuyAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
+func (a ActionBuy) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	bb, ok := data.(*Blackboard)
 	if !ok {
 		slog.Error("BuyAction: expected a blackboard")
@@ -896,24 +1111,25 @@ func (a BuyAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
 		bb.ship.log.Error(errors.Wrap(err, "Failed to buy goods").Error())
 		return bt.Failure
 	}
+
 	return bt.Success
 }
 
-type DeliverContractAction struct{}
+type ActionDeliverContractGoods struct{}
 
-func (a DeliverContractAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
+func (a ActionDeliverContractGoods) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	bb, ok := data.(*Blackboard)
 	if !ok {
-		slog.Error("DeliverContractAction: expected a blackboard")
+		slog.Error("ActionDeliverContractGoods: expected a blackboard")
 		return bt.Running
 	}
 
 	if bb.contract == nil {
-		slog.Error("DeliverContractAction: blackboard: contract was nil")
+		slog.Error("ActionDeliverContractGoods: blackboard: contract was nil")
 		return bt.Running
 	}
 	if bb.ship == nil {
-		slog.Error("DeliverContractAction: blackboard: ship was nil")
+		slog.Error("ActionDeliverContractGoods: blackboard: ship was nil")
 		return bt.Running
 	}
 
@@ -924,7 +1140,7 @@ func (a DeliverContractAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	contract, err := bb.ship.DeliverContract(bb.contract.ID, bb.contract.Terms.Deliver[0].TradeSymbol)
 	if err != nil {
 		bb.ship.log.Error(errors.Wrap(err, "Failed to deliver contract goods").Error())
-		bb.ship.log.Debug("DeliverContractAction: fail")
+		bb.ship.log.Debug("ActionDeliverContractGoods: fail")
 		return bt.Failure
 	}
 
@@ -1136,9 +1352,37 @@ func (a ConditionContractTermsMet) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	return bt.Success
 }
 
-type FulfillContractAction struct{}
+type ConditionHasContractGoods struct{}
 
-func (a FulfillContractAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
+func (a ConditionHasContractGoods) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionHasContractGoods: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.contract == nil {
+		slog.Error("ConditionHasContractGoods: blackboard: contract was nil")
+		return bt.Running
+	}
+
+	contractGoods := []string{}
+	for _, d := range bb.contract.Terms.Deliver {
+		contractGoods = append(contractGoods, d.TradeSymbol)
+	}
+
+	for _, inv := range bb.ship.state.Cargo.Inventory {
+		if slices.Contains(contractGoods, string(inv.Symbol)) {
+			return bt.Success
+		}
+	}
+
+	return bt.Failure
+}
+
+type ActionFulfillContract struct{}
+
+func (a ActionFulfillContract) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	bb, ok := data.(*Blackboard)
 	if !ok {
 		slog.Error("FulfillContractAction: expected a blackboard")
@@ -1179,4 +1423,142 @@ func (a *IsAtWaypointAction) Tick(data bt.Blackboard) bt.BehaviorStatus {
 	}
 	slog.Debug("NewIsAtWaypointAction: success", "waypoint", a.waypoint)
 	return bt.Success
+}
+
+type ActionSleepNode struct {
+	dur time.Duration
+}
+
+func (a ActionSleepNode) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	time.Sleep(a.dur)
+	return bt.Success
+}
+
+func ActionSleep(duration time.Duration) ActionSleepNode {
+	return ActionSleepNode{dur: duration}
+}
+
+type ConditionIsAtTradeSource struct{}
+
+func (a ConditionIsAtTradeSource) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionIsAtTradeSource: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.ship.CurrWaypoint() == bb.tradeSource {
+		return bt.Success
+	}
+
+	return bt.Failure
+}
+
+type ConditionIsAtTradeBuyer struct{}
+
+func (a ConditionIsAtTradeBuyer) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionIsAtTradeBuyer: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.ship.CurrWaypoint() == bb.tradeBuyer {
+		return bt.Success
+	}
+
+	return bt.Failure
+}
+
+type ConditionHasActiveTrade struct{}
+
+func (a ConditionHasActiveTrade) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionHasActiveTrade: expected a blackboard")
+		return bt.Running
+	}
+
+	if bb.tradeBuyer != "" {
+		return bt.Success
+	}
+
+	return bt.Failure
+}
+
+type ActionAssignBestTrade struct{}
+
+func (a ActionAssignBestTrade) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionHasActiveTrade: expected a blackboard")
+		return bt.Running
+	}
+
+	trades, err := bb.repo.FindMarketTrades()
+	if err != nil {
+		bb.Logger().Error(errors.Wrap(err, "ActionAssignBestTrade: FindMarketTrades failed:").Error())
+		return bt.Running
+	}
+
+	if len(trades) == 0 {
+		bb.Logger().Info(errors.Wrap(err, "ActionAssignBestTrade: no trades found").Error())
+		return bt.Running
+	}
+
+	bb.tradeSource = trades[0].Origin
+	bb.tradeBuyer = trades[0].Dest
+	bb.tradeGood = trades[0].Good
+
+	// TODO: why limit this?
+	bb.purchaseMaxUnits = 20
+
+	return bt.Success
+}
+
+type ActionSetDestinationTradeBuyer struct{}
+
+func (a ActionSetDestinationTradeBuyer) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ActionSetDestinationTradeBuyer: expected a blackboard")
+		return bt.Running
+	}
+
+	bb.destination = bb.tradeBuyer
+
+	return bt.Success
+}
+
+type ActionSetDestinationTradeSource struct{}
+
+func (a ActionSetDestinationTradeSource) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ActionSetDestinationTradeSource: expected a blackboard")
+		return bt.Running
+	}
+
+	bb.destination = bb.tradeSource
+
+	return bt.Success
+}
+
+type ConditionHasTradeCargo struct{}
+
+func (a ConditionHasTradeCargo) Tick(data bt.Blackboard) bt.BehaviorStatus {
+	bb, ok := data.(*Blackboard)
+	if !ok {
+		slog.Error("ConditionHasTradeCargo: expected a blackboard")
+		return bt.Running
+	}
+
+	spew.Dump(bb.ship.state.Cargo.Inventory)
+	bb.Logger().Debug("ConditionHasTradeCargo: checking for trade cargo", "good", bb.tradeGood)
+
+	if bb.ship.HasGood(bb.tradeGood) {
+		return bt.Success
+	}
+
+	return bt.Failure
 }

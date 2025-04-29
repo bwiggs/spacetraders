@@ -1,0 +1,1 @@
+ALTER TABLE waypoints ADD COLUMN json JSONB DEFAULT null;

@@ -43,7 +43,7 @@ func newContract() error {
 }
 
 func listContracts() error {
-	client, err := client.Client()
+	client, err := client.GetClient()
 	if err != nil {
 		return err
 	}

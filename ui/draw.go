@@ -48,7 +48,9 @@ func (g *Game) DrawShip(screen *ebiten.Image, ship *api.Ship) {
 	eta := time.Until(ship.Nav.Route.Arrival)
 	text.Draw(screen, ship.Symbol, defaultFont, int(labelOffsetX), int(sy)+7, colornames.White)
 	if eta > 0 {
-		text.Draw(screen, "ETA: "+formatDuration(eta), defaultFont, int(labelOffsetX), int(sy)+20, colornames.White)
+		parts := strings.Split(ship.Nav.Route.Destination.Symbol, "-")
+		name := parts[len(parts)-1]
+		text.Draw(screen, name+" "+formatDuration(eta), defaultFont, int(labelOffsetX), int(sy)+20, colornames.White)
 	}
 
 	showBars := false
@@ -100,23 +102,37 @@ func (g *Game) DrawSystem(screen *ebiten.Image, system models.System) {
 		size = 3
 	}
 
-	c := constellationColors[system.Constellation]
-	if c == nil {
-		c = colornames.White
+	// c := constellationColors[system.Constellation]
+	// if c == nil {
+	// 	c = colornames.White
+	// }
+	c, found := SystemTypeColors[system.Type]
+	if !found {
+		c = colornames.Aqua
 	}
-	c = colornames.White
 	if system.Symbol == currSystem {
 		c = colornames.Lime
+		size *= 2
 	}
 
 	vector.DrawFilledRect(screen, float32(sx), float32(sy), size, size, c, g.settings.antialias)
 	// vector.StrokeLine(screen, float32(sx), float32(sy), float32(sx+size), float32(sy+size), size, c, g.settings.antialias)
-	if g.camera.Zoom > showSystemModeDetailsZoomLevel || currSystem == system.Symbol {
-		text.Draw(screen, fmt.Sprintf("%s (%s)", system.Symbol, system.Name), defaultFont, int(sx)+10.0, int(sy)+7, colornames.White)
+
+	labelColor := colornames.White
+	// if currSystem == system.Symbol {
+	// 	text.Draw(screen, fmt.Sprintf("%s %s (%s)", agent.Symbol, system.Symbol, system.Name), defaultFont, int(sx)+10.0, int(sy)+7, labelColor)
+	// } else
+	if agent, found := agentsBySystem[system.Symbol]; found {
+		if system.Symbol == currSystem {
+			labelColor = colornames.Lime
+		}
+		text.Draw(screen, fmt.Sprintf("%s %s", agent.Symbol, system.Symbol), defaultFont, int(sx)+10.0, int(sy)+7, labelColor)
+	} else if g.camera.Zoom > showSystemModeDetailsZoomLevel {
+		text.Draw(screen, fmt.Sprintf("%s (%s)", system.Symbol, system.Name), defaultFont, int(sx)+10.0, int(sy)+7, colornames.Gold)
 	}
 }
 
-func (g *Game) DrawWaypoints(screen *ebiten.Image, waypoints []models.Waypoint) {
+func (g *Game) DrawWaypoints(screen *ebiten.Image, waypoints []*models.Waypoint) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	minX, maxX, minY, maxY := g.camera.GetWorldBounds(sw, sh)
 
@@ -138,7 +154,7 @@ func (g *Game) DrawWaypoints(screen *ebiten.Image, waypoints []models.Waypoint) 
 	}
 }
 
-func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
+func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint *models.Waypoint) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 
 	c, ok := WaypointTypeColors[waypoint.Type]
@@ -168,11 +184,17 @@ func (g *Game) DrawWaypoint(screen *ebiten.Image, waypoint models.Waypoint) {
 		textY := int(sy) - 1                                  // shift text a bit up
 
 		parts := strings.Split(waypoint.Symbol, "-")
-		id := parts[len(parts)-1]
+		subtext := parts[len(parts)-1]
+		if waypoint.Waypoint != nil {
+			for _, o := range waypoint.Orbitals {
+				parts := strings.Split(o.Symbol, "-")
+				subtext += fmt.Sprintf(" %s", parts[len(parts)-1])
+			}
+		}
 
 		if g.settings.showWaypointLabels {
 			text.Draw(screen, waypoint.Type, defaultFont, textX, textY, g.colors.WaypointLabelColor)
-			text.Draw(screen, id, defaultFont, textX, textY+12, g.colors.WaypointLabelColor)
+			text.Draw(screen, subtext, defaultFont, textX, textY+13, g.colors.WaypointLabelColor)
 		}
 	}
 }
@@ -201,7 +223,7 @@ func (g *Game) DrawDistanceRings(screen *ebiten.Image) {
 
 }
 
-func (g *Game) DrawWaypointOrbits(screen *ebiten.Image, waypoints []models.Waypoint) {
+func (g *Game) DrawWaypointOrbits(screen *ebiten.Image, waypoints []*models.Waypoint) {
 	if g.camera.Zoom < showSystemModeDetailsZoomLevel {
 		return
 	}
@@ -213,7 +235,7 @@ func (g *Game) DrawWaypointOrbits(screen *ebiten.Image, waypoints []models.Waypo
 	}
 }
 
-func (g *Game) DrawWaypointOrbit(screen *ebiten.Image, wp models.Waypoint) {
+func (g *Game) DrawWaypointOrbit(screen *ebiten.Image, wp *models.Waypoint) {
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 
@@ -244,13 +266,70 @@ func (g *Game) DrawShipList(screen *ebiten.Image, ships []*api.Ship) {
 	x := 10
 	y := 30
 	for i := range ships {
-		label := fmt.Sprintf("%-10s %-10s %10s @ %-12s", ships[i].Symbol, string(ships[i].Registration.Role), ships[i].Nav.Status, ships[i].Nav.GetWaypointSymbol())
+
+		etastr := ""
+		var sym string
+		if ships[i].Nav.Status == api.ShipNavStatusINTRANSIT {
+			sym = "→"
+			eta := time.Until(ships[i].Nav.Route.Arrival)
+			if eta > 0 {
+				etastr = " " + formatDuration(eta)
+			}
+		} else if ships[i].Nav.Status == api.ShipNavStatusDOCKED {
+			sym = "▣"
+		} else if ships[i].Nav.Status == api.ShipNavStatusINORBIT {
+			sym = "○"
+		} else {
+			sym = "?"
+		}
+
+		label := fmt.Sprintf("%-10s %-10s %s %-12s%s", ships[i].Symbol, string(ships[i].Registration.Role), sym, ships[i].Nav.GetWaypointSymbol(), etastr)
 		text.Draw(screen, label, hudFont, x, y, colornames.Aqua)
-		y += 12
+		y += 15
 	}
 }
 
-func (g *Game) DrawContractStatus(screen *ebiten.Image, contracts []api.Contract) {
-	// sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
+func (g *Game) DrawContracts(screen *ebiten.Image, contracts []api.Contract) {
+	_, sh := g.WindowSize()
+	contract := contracts[len(contracts)-1]
+	isFulfilled := contract.GetFulfilled()
 
+	lineHeight := 18
+	numLines := 2
+
+	contractValue := contract.Terms.GetPayment().OnAccepted + contract.Terms.GetPayment().OnFulfilled
+
+	etx := time.Until(contract.Terms.GetDeadline())
+	var status string
+	var color color.Color
+	if etx < 0 {
+		status = "EXPIRED"
+		color = colornames.Red
+	} else if isFulfilled {
+		status = "FULFILLED"
+		color = colornames.Palegreen
+	} else {
+		color = colornames.Aqua
+		status = formatDuration(etx)
+		numLines += len(contract.Terms.Deliver)
+	}
+	label := fmt.Sprintf("%s - %s - $%d - %s", contract.FactionSymbol, contract.Type, contractValue, status)
+
+	text.Draw(screen, "CONTRACTS", hudFont, 10, sh-(lineHeight*numLines), colornames.Orange)
+	numLines--
+	text.Draw(screen, label, hudFont, 10, sh-(lineHeight*numLines), color)
+	numLines--
+
+	if !isFulfilled {
+		for _, td := range contract.Terms.Deliver {
+			l := fmt.Sprintf("    %s %s %d/%d", td.DestinationSymbol, td.TradeSymbol, td.UnitsFulfilled, td.UnitsRequired)
+			text.Draw(screen, l, hudFont, 10, sh-(lineHeight*numLines), colornames.Aqua)
+			numLines--
+		}
+	}
+}
+
+func (g *Game) DrawCredits(screen *ebiten.Image, credits int) {
+	sw, _ := g.WindowSize()
+	text.Draw(screen, fmt.Sprintf("%d", credits), hudFont, sw-100, 30, colornames.Aqua)
 }

@@ -16,18 +16,22 @@ func Clamp[T ~int | ~float32 | ~float64](val, min, max T) T {
 }
 
 func formatDuration(d time.Duration) string {
-	h := int(d.Hours())
-	m := int(d.Minutes()) % 60
-	s := int(d.Seconds()) % 60
+	days := int(d.Hours()) / 24
+	hours := int(d.Hours()) % 24
+	minutes := int(d.Minutes()) % 60
+	seconds := int(d.Seconds()) % 60
 
 	var out string
-	if h > 0 {
-		out += fmt.Sprintf("%dh ", h)
+	if days > 0 {
+		out += fmt.Sprintf("%dd ", days)
 	}
-	if m > 0 || h > 0 {
-		out += fmt.Sprintf("%dm ", m)
+	if hours > 0 || days > 0 {
+		out += fmt.Sprintf("%dh ", hours)
 	}
-	out += fmt.Sprintf("%ds", s)
+	if minutes > 0 || hours > 0 || days > 0 {
+		out += fmt.Sprintf("%dm ", minutes)
+	}
+	out += fmt.Sprintf("%ds", seconds)
 
 	return out
 }

@@ -21,5 +21,9 @@ func (c *Contract) Revenue() int {
 }
 
 func (c *Contract) IsExpired() bool {
-	return c.DeadlineToAccept.Value.Before(time.Now())
+	now := time.Now()
+	if c.GetAccepted() {
+		return c.Terms.Deadline.Before(now)
+	}
+	return c.GetDeadlineToAccept().Value.Before(now)
 }

@@ -43,7 +43,7 @@ func (r *Repo) UpsertMarket(market api.Market) error {
 			}
 		}
 	} else {
-		upsertMarketStmt, err := tx.Prepare("INSERT OR REPLACE INTO markets (waypoint, good, type) values (?, ?, ?)")
+		upsertMarketStmt, err := tx.Prepare("INSERT OR IGNORE INTO markets (waypoint, good, type) values (?, ?, ?)")
 		if err != nil {
 			return err
 		}
@@ -182,9 +182,22 @@ func (r *Repo) FindMarketsWithGoods(goods []string) ([]string, error) {
 	return waypoints, nil
 }
 
-// FindExportWaypointsForGood returns a list of markets which are exporting the provided good ordered by ask price asc.
-func (r *Repo) FindExportWaypointsForGood(good string) ([]string, error) {
-	rows, err := r.db.Query(`select waypoint from markets where good = ? and type = 'EXPORT' order by ask asc`, good)
+// WaypointHasGood returns true if the given waypoint provides the given good
+func (r *Repo) WaypointHasGood(waypoint string, good string) (bool, error) {
+	rows, err := r.db.Query(`select waypoint from markets where good = ? and waypoint = ? order by ask asc`, good, waypoint)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	available := rows.Next()
+
+	return available, nil
+}
+
+// FindBuyWaypointsForGood returns a list of markets which are exporting the provided good ordered by ask price asc.
+func (r *Repo) FindBuyWaypointsForGood(good string) ([]string, error) {
+	rows, err := r.db.Query(`select waypoint from markets where good = ? and type in ('EXPORT','EXCHANGE') order by ask asc`, good)
 	if err != nil {
 		return nil, err
 	}
@@ -240,9 +253,7 @@ FROM markets im
 JOIN markets ex ON im.good = ex.good AND im.type = 'IMPORT' AND ex.type = 'EXPORT' AND im.bid IS NOT NULL AND ex.ask IS NOT NULL
 JOIN waypoints wim ON wim.symbol = im.waypoint
 JOIN waypoints wex ON wex.symbol = ex.waypoint
-WHERE
-	gross > 100 AND
-	abs(wex.x) <= 100 AND abs(wex.y) <= 100 AND abs(wim.x) <= 100 AND abs(wim.y) <= 100
+WHERE gross > 100
 ORDER BY gross DESC;`)
 	if err != nil {
 		return nil, err

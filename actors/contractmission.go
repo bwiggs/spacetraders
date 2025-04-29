@@ -23,12 +23,54 @@ func (m *ContractMission) Execute(data *Blackboard) {
 	}
 }
 
-func NewContractMission(client *api.Client, repo *repo.Repo) *ContractMission {
+func NewContractMission(client api.Invoker, repo *repo.Repo) *ContractMission {
 	base := NewBaseMission(client, repo)
 	base.name = "ContractMission"
 	return &ContractMission{
 		BaseMission: base,
 		bt: bt.NewSelector(
+			// success if the contract can by filfilled
+
+			bt.NewSequence(
+				ConditionContractInProgress{},
+
+				bt.NewSelector(
+					bt.NewSequence(
+						ConditionIsAtContractDestination{},
+						bt.NewSelector(
+							bt.NewSequence(
+								ConditionContractTermsMet{},
+								ActionFulfillContract{},
+							),
+							bt.NewSequence(
+								ConditionHasContractGoods{},
+								ActionDock{},
+								ActionDeliverContractGoods{},
+							),
+
+							bt.NewSequence(
+								ConditionHasNonContractGoods{},
+								bt.AlwaysFail(ActionSellCargo{}),
+							),
+						),
+					),
+
+					bt.NewSequence(
+						ConditionCargoIsFull{},
+						bt.NewSequence(
+							SetDeliveryDestFromContract{},
+							NavigationAction(),
+						),
+					),
+
+					bt.NewSequence(
+						SetPurchaseFromContract{},
+						NavigationAction(),
+						ActionDock{},
+						ActionBuy{},
+					),
+				),
+			),
 
 			bt.NewSequence(
 				ConditionNilContract{},
@@ -36,8 +78,12 @@ func NewContractMission(client *api.Client, repo *repo.Repo) *ContractMission {
 			),
 
 			bt.NewSequence(
+				bt.AlwaysFail(ActionSellCargo{}),
+			),
+
+			bt.NewSequence(
 				ConditionContractClosed{},
-				DockAction{},
+				ActionDock{},
 				NegotiateNewContract{},
 			),
 
@@ -45,64 +91,6 @@ func NewContractMission(client *api.Client, repo *repo.Repo) *ContractMission {
 				ConditionHasPendingContract{},
 				// IsCurrentContractProfitable{},
 				AcceptContract{},
-			),
-
-			// success if the contract can by filfilled
-			bt.NewSequence(
-				ConditionContractInProgress{},
-				bt.NewSelector(
-
-					bt.NewSequence(
-						ConditionContractTermsMet{},
-						FulfillContractAction{},
-					),
-
-					bt.NewSequence(
-						// sell off any non-contract goods
-						bt.NewSelector(
-							bt.Not(ConditionHasNonContractGoods{}),
-							// SellCargoSequence
-							// bt.NewSequence(
-							DockAction{},
-							SellCargoAction{},
-							// )
-						),
-
-						// buy contract good sourcing
-						bt.NewSelector(
-							ConditionCargoIsFull{},
-							ConditionShipHasRemainingContractUnits{},
-							bt.NewSequence(
-								SetPurchaseFromContract{},
-								NavigationAction(),
-								DockAction{},
-								BuyAction{},
-							),
-						),
-
-						// contract delivery
-
-						SetDeliveryDestFromContract{},
-
-						bt.NewSelector(
-							ConditionIsAtNavDest{},
-							bt.NewSequence(
-								RefuelAction{},
-								OrbitAction{},
-								NavAction{},
-							),
-						),
-
-						DockAction{},
-
-						bt.NewSelector(
-							ConditionContractAccepted{},
-							AcceptContractAction{},
-						),
-
-						DeliverContractAction{},
-					),
-				),
 			),
 		),
 	}

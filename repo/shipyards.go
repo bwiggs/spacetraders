@@ -86,7 +86,7 @@ func (r *Repo) UpsertShipyardShips(waypoint string, ships []api.ShipyardShip) er
 		return err
 	}
 
-	upsert, err := tx.Prepare("INSERT OR REPLACE INTO shipyards (waypoint, ship, supply, bid) values (?, ?, ?, ?)")
+	upsert, err := tx.Prepare("INSERT OR IGNORE INTO shipyards (waypoint, ship, supply, bid) values (?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}

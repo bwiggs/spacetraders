@@ -30,7 +30,7 @@ func init() {
 
 type Kernel struct {
 	logger *slog.Logger
-	client *api.Client
+	client api.Invoker
 	repo   *repo.Repo
 	state  *State
 }
@@ -39,7 +39,7 @@ func New() (*Kernel, error) {
 
 	logger := slog.Default()
 
-	client, err := client.Client()
+	client, err := client.GetClient()
 	if err != nil {
 		logger.Error("failed to create client", "err", err)
 		return nil, err
@@ -76,6 +76,10 @@ func (k *Kernel) Logger() *slog.Logger {
 	return k.logger
 }
 
+func (k *Kernel) Client() api.Invoker {
+	return k.client
+}
+
 func (k *Kernel) Repo() *repo.Repo {
 	return k.repo
 }
@@ -86,7 +90,7 @@ func (k *Kernel) State() *State {
 
 func (k *Kernel) Start() error {
 	tasks.Start()
-	// go k.initBackgroundTasks(k.client)
+	go k.initBackgroundTasks(k.client)
 
 	bot.Start(k.client, k.repo)
 	return nil
@@ -99,7 +103,7 @@ func (k *Kernel) Stop() error {
 	return nil
 }
 
-func (k *Kernel) initBackgroundTasks(client *api.Client) error {
+func (k *Kernel) initBackgroundTasks(client api.Invoker) error {
 	tasks.SetInterval(func() {
 		tasks.LogAgentMetrics(client)
 	}, 1*time.Minute)
@@ -119,7 +123,7 @@ func (k *Kernel) initBackgroundTasks(client *api.Client) error {
 
 	// }, 30*time.Second)
 
-	ScanMarkets := true
+	ScanMarkets := false
 	if ScanMarkets {
 		tasks.SetInterval(func() {
 			slog.Info("task: scanning markets and shipyards")
@@ -129,7 +133,7 @@ func (k *Kernel) initBackgroundTasks(client *api.Client) error {
 			}
 			err = tasks.ScanShipyards(client, k.repo, viper.GetString("SYSTEM"))
 			if err != nil {
-				slog.Error(errors.Wrap(err, "failed to scan markets").Error())
+				slog.Error(errors.Wrap(err, "failed to scan shipyards").Error())
 			}
 		}, 15*time.Minute)
 	}

@@ -26,12 +26,12 @@ func (m *ExtractionMission) Execute(data *Blackboard) {
 	m.GetShipBehavior(data.ship.symbol).Tick(&data)
 }
 
-func NewExtractionMission(client *api.Client, repo *repo.Repo, extractionWaypoint string) *ExtractionMission {
+func NewExtractionMission(client api.Invoker, repo *repo.Repo, extractionWaypoint string) *ExtractionMission {
 	base := NewBaseMission(client, repo)
 	base.name = "ExtractionMission"
 
 	gotoExtractionPoint := bt.NewSequence(
-		bt.Not(ConditionIsAtExtractionWaypoint{}),
+		bt.Invert(ConditionIsAtExtractionWaypoint{}),
 		SetDestinationToExtractionWaypoint{},
 		NavigationAction(),
 	)
@@ -39,7 +39,7 @@ func NewExtractionMission(client *api.Client, repo *repo.Repo, extractionWaypoin
 	extract := bt.NewSequence(
 		ConditionIsAtExtractionWaypoint{},
 		JettisonNonSellableCargo{},
-		bt.Not(ConditionCargoIsFull{}),
+		bt.Invert(ConditionCargoIsFull{}),
 		ExtractAction{},
 	)
 
@@ -49,8 +49,8 @@ func NewExtractionMission(client *api.Client, repo *repo.Repo, extractionWaypoin
 		SetDestinationToBestMarketToSellCargo{},
 		bt.NewSequence(
 			NavigationAction(),
-			DockAction{},
-			SellCargoAction{},
+			ActionDock{},
+			ActionSellCargo{},
 		),
 	)
 
@@ -74,7 +74,7 @@ func NewExtractionMission(client *api.Client, repo *repo.Repo, extractionWaypoin
 	haulerBehavior := bt.NewSelector(
 		bt.NewSequence(
 			ConditionIsAtExtractionWaypoint{},
-			bt.Not(ConditionCargoIsFull{}),
+			bt.Invert(ConditionCargoIsFull{}),
 		),
 		sell,
 		gotoExtractionPoint,

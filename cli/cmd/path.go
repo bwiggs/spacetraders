@@ -22,9 +22,18 @@ var pathCmd = &cobra.Command{
 			panic(err)
 		}
 
-		wps, _ := r.GetWaypoints(viper.GetString("system"))
-		ship := &api.Ship{Symbol: "BWIGGS-1", Nav: api.ShipNav{WaypointSymbol: api.WaypointSymbol(args[0])}}
-		path := algos.FindPath(ship, args[1], wps)
-		spew.Dump(path)
+		waypoints, _ := r.GetWaypoints(viper.GetString("system"))
+		ship := &api.Ship{
+			Symbol: "BWIGGS-1",
+			Nav: api.ShipNav{FlightMode: api.ShipNavFlightModeCRUISE,
+				WaypointSymbol: api.WaypointSymbol(args[0]),
+			},
+			Fuel: api.ShipFuel{
+				Current:  400,
+				Capacity: 400,
+			},
+		}
+		cost, path := algos.FindPath(ship, args[1], waypoints)
+		spew.Dump(cost, path)
 	},
 }

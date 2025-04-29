@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/bwiggs/spacetraders-go/actors"
 	"github.com/bwiggs/spacetraders-go/api"
@@ -12,7 +11,7 @@ import (
 	"github.com/go-faster/errors"
 )
 
-func Start(client *api.Client, r *repo.Repo) {
+func Start(client api.Invoker, r *repo.Repo) {
 	ships := []api.Ship{}
 	page := 1
 	processed := 0
@@ -33,7 +32,6 @@ func Start(client *api.Client, r *repo.Repo) {
 			break
 		}
 		page++
-		time.Sleep(1 * time.Second)
 	}
 
 	fleet := make(map[string]*api.Ship)
@@ -49,14 +47,21 @@ func Start(client *api.Client, r *repo.Repo) {
 		fleetByType[role] = append(fleetByType[role], &s)
 	}
 
-	contractMission(client, r, fleet)
-	// tradeMission(client, r, fleet)
+	go contractMission(client, r, fleet)
+	// go marketReconMission(client, r, fleetByType)
+	// go tradeMission(client, r, fleet)
 	// miningMission(client, r, fleet)
 	// extractionMission(client, r, fleet)
 }
 
-func tradeMission(client *api.Client, r *repo.Repo, fleet map[string]*api.Ship) {
-	commandShip := actors.NewShip(fleet["BWIGGS-1"], client)
+func marketReconMission(client api.Invoker, r *repo.Repo, fleetByType map[string][]*api.Ship) {
+	mission := actors.NewMarketReconMission(client, r)
+	for _, p := range fleetByType[string(api.ShipRoleSATELLITE)] {
+		mission.AssignShip(actors.MissionShipRoleTrader, actors.NewShip(p, client))
+	}
+}
+func tradeMission(client api.Invoker, r *repo.Repo, fleet map[string]*api.Ship) {
+	commandShip := actors.NewShip(fleet["BWIGGS-B"], client)
 
 	tradeMission := actors.NewTradeMission(client, r)
 	tradeMission.AssignShip(actors.MissionShipRoleTrader, commandShip)
@@ -66,7 +71,7 @@ func tradeMission(client *api.Client, r *repo.Repo, fleet map[string]*api.Ship) 
 	// 	tradeMission.AssignShip(actors.MissionShipRoleTrader, ship)
 	// }
 }
-func miningMission(client *api.Client, r *repo.Repo, fleet map[string]*api.Ship) {
+func miningMission(client api.Invoker, r *repo.Repo, fleet map[string]*api.Ship) {
 	// excavator := actors.NewShip(fleet["BWIGGS-5"], client)
 	// excavator.SetMission(actors.NewMiningMission(r, "X1-HK42-AC5C"))
 
@@ -76,7 +81,7 @@ func miningMission(client *api.Client, r *repo.Repo, fleet map[string]*api.Ship)
 	// }
 }
 
-func extractionMission(client *api.Client, r *repo.Repo, fleet map[string]*api.Ship) {
+func extractionMission(client api.Invoker, r *repo.Repo, fleet map[string]*api.Ship) {
 	// // extract mission
 	// {
 	// 	extractMission := actors.NewExtractionMission(client, r, "X1-QY42-CZ5F")
@@ -97,7 +102,7 @@ func extractionMission(client *api.Client, r *repo.Repo, fleet map[string]*api.S
 	// // }
 }
 
-func contractMission(client *api.Client, r *repo.Repo, fleet map[string]*api.Ship) {
+func contractMission(client api.Invoker, r *repo.Repo, fleet map[string]*api.Ship) {
 	commandShip := actors.NewShip(fleet["BWIGGS-1"], client)
 	commandShip.SetMission(actors.NewContractMission(client, r))
 }

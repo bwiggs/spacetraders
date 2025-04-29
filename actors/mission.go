@@ -17,6 +17,7 @@ const (
 	MissionShipRoleExcavatorTransporter
 	MissionShipRoleTrader
 	MissionShipRoleHauler
+	MissionShipRoleSatellite
 )
 
 type Mission interface {
@@ -31,26 +32,26 @@ type Mission interface {
 }
 
 type ShipRoleMap map[string]MissionShipRole
-type RoleShipMap map[MissionShipRole][]*Ship
+type ShipsByRole map[MissionShipRole][]*Ship
 type RoleBehaviors map[MissionShipRole]bt.BehaviorNode
 
-func NewBaseMission(client *api.Client, repo *repo.Repo) *BaseMission {
+func NewBaseMission(client api.Invoker, repo *repo.Repo) *BaseMission {
 	return &BaseMission{
 		client:        client,
 		repo:          repo,
 		shipRole:      make(ShipRoleMap),
-		roleShips:     make(RoleShipMap),
+		shipsByRole:   make(ShipsByRole),
 		roleBehaviors: make(RoleBehaviors),
 	}
 }
 
 type BaseMission struct {
 	name          string
-	client        *api.Client
+	client        api.Invoker
 	repo          *repo.Repo
 	roleBehaviors RoleBehaviors
 	shipRole      ShipRoleMap
-	roleShips     RoleShipMap
+	shipsByRole   ShipsByRole
 }
 
 func (m *BaseMission) String() string {
@@ -63,7 +64,7 @@ func (m *BaseMission) GetShipRole(shipSymbol string) (MissionShipRole, bool) {
 }
 
 func (m *BaseMission) GetShipsByRole(role MissionShipRole) []*Ship {
-	if ships, found := m.roleShips[role]; found {
+	if ships, found := m.shipsByRole[role]; found {
 		return ships
 	}
 	// return an empty list
@@ -87,12 +88,12 @@ func (m *BaseMission) GetShipBehavior(shipSymbol string) bt.BehaviorNode {
 func (m *BaseMission) AssignShip(role MissionShipRole, ship *Ship) {
 	m.shipRole[ship.symbol] = role
 
-	ships, found := m.roleShips[role]
+	ships, found := m.shipsByRole[role]
 	if !found {
 		ships = []*Ship{}
 	}
 	ships = append(ships, ship)
-	m.roleShips[role] = ships
+	m.shipsByRole[role] = ships
 }
 
 func (m *BaseMission) Execute(data *Blackboard) {

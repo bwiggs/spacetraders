@@ -17,11 +17,11 @@ type Ship struct {
 	symbol       string
 	mission      Mission
 	log          *slog.Logger
-	client       *api.Client
+	client       api.Invoker
 	transferLock sync.Mutex
 }
 
-func NewShip(ship *api.Ship, client *api.Client) *Ship {
+func NewShip(ship *api.Ship, client api.Invoker) *Ship {
 
 	logger := slog.With("ship", ship.Symbol)
 
@@ -261,6 +261,10 @@ func (s *Ship) Buy(good string, maxUnits int, wp string) error {
 			return errors.Wrap(err, "Buy failed")
 		}
 
+		if err := s.Update(); err != nil {
+			return errors.Wrap(err, "failed to update ship state")
+		}
+
 		s.state.Cargo = pres.Data.Cargo
 	}
 
@@ -317,7 +321,9 @@ func (s *Ship) ReceiveTransfer(from *Ship, tradeGoodSymbol api.TradeSymbol, maxU
 }
 
 func (s *Ship) Transit(dest string) error {
-	if s.CurrWaypoint() == dest {
+	origin := s.CurrWaypoint()
+
+	if origin == dest {
 		return nil
 	}
 
@@ -327,18 +333,29 @@ func (s *Ship) Transit(dest string) error {
 		}
 	}
 
-	navReq := api.NewOptNavigateShipReq(api.NavigateShipReq{WaypointSymbol: dest})
-	res, err := s.client.NavigateShip(context.TODO(), navReq, api.NavigateShipParams{ShipSymbol: s.symbol})
+	if s.state.Nav.FlightMode != api.ShipNavFlightModeCRUISE {
+		if _, err := s.client.PatchShipNav(
+			context.TODO(),
+			api.NewOptPatchShipNavReq(api.PatchShipNavReq{FlightMode: api.NewOptShipNavFlightMode(api.ShipNavFlightModeCRUISE)}),
+			api.PatchShipNavParams{ShipSymbol: s.symbol}); err != nil {
+			return errors.Wrap(err, "Transit: failed to set flight mode")
+		}
+	}
+
+	res, err := s.client.NavigateShip(
+		context.TODO(),
+		api.NewOptNavigateShipReq(api.NavigateShipReq{WaypointSymbol: dest}),
+		api.NavigateShipParams{ShipSymbol: s.symbol},
+	)
 	if err != nil {
-		return errors.Wrap(err, "NavigateShip failed: maybe not enough fuel?")
+		return errors.Wrap(err, "Transit: NavigateShip failed: maybe not enough fuel?")
 	}
 
 	// update state
 	s.state.Fuel = res.Data.Fuel
 	s.state.Nav = res.Data.Nav
 
-	dur := time.Until(s.state.Nav.Route.Arrival)
-	s.log.Info("transiting", "nav.route.dest", dest, "nav.route.arrival", dur)
+	s.log.Info("transiting", "origin", origin, "dest", dest, "arrival", time.Until(s.state.Nav.Route.Arrival))
 	return nil
 }
 
@@ -471,6 +488,10 @@ func (s *Ship) HasSurveyor() bool {
 
 func (s *Ship) CurrWaypoint() string {
 	return string(s.state.Nav.WaypointSymbol)
+}
+
+func (s *Ship) System() string {
+	return s.CurrWaypoint()[:7]
 }
 
 func (s *Ship) IsCargoFull() bool {

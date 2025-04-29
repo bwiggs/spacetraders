@@ -10,7 +10,7 @@ import (
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 )
 
-func LogAgentMetrics(client *api.Client) error {
+func LogAgentMetrics(client api.Invoker) error {
 	client.GetAgent(context.TODO(), api.GetAgentParams{})
 	dat, err := client.GetMyAgent(context.TODO())
 	if err != nil {

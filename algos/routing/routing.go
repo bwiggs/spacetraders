@@ -2,6 +2,7 @@ package algos
 
 import (
 	"container/heap"
+	"fmt"
 	"math"
 
 	"github.com/bwiggs/spacetraders-go/api"
@@ -10,20 +11,22 @@ import (
 )
 
 type Edge struct {
-	To       string  // Destination node
-	Distance float64 // Distance between nodes
+	To           string  // Destination node
+	Distance     float64 // Distance between nodes
+	FuelRequired int     // Distance between nodes
 }
 
 type Node struct {
-	ID       string
-	FuelCost float64 // Price per unit fuel at this node
-	Edges    []Edge
+	ID        string
+	FuelPrice float64 // Price per unit fuel at this node
+	Edges     []Edge
+	HasFuel   bool
 }
 
 type State struct {
-	NodeID   string
-	Distance float64
-	Priority float64
+	NodeID        string
+	Priority      float64
+	FuelRemaining int
 }
 
 type PriorityQueue []*State
@@ -50,23 +53,25 @@ func (pq *PriorityQueue) Pop() any {
 	return item
 }
 
-func djikstra(nodes map[string]Node, start, end string) (float64, []string) {
+func djikstra(nodes map[string]Node, start, end string, shipFuelCapacity int) (float64, []string) {
 	const INF = math.MaxFloat64
-	distances := make(map[string]float64)
+	costs := make(map[string]float64)
 	prev := make(map[string]string)
 
 	for id := range nodes {
-		distances[id] = INF
+		costs[id] = INF
 	}
-	distances[start] = 0
+	costs[start] = 0
 
 	pq := &PriorityQueue{}
 	heap.Init(pq)
-	heap.Push(pq, &State{NodeID: start, Distance: 0, Priority: 0})
+	heap.Push(pq, &State{NodeID: start, Priority: 0, FuelRemaining: shipFuelCapacity})
 
 	for pq.Len() > 0 {
 		state := heap.Pop(pq).(*State)
 		currentID := state.NodeID
+		remainingFuel := state.FuelRemaining
+		currentNode := nodes[currentID]
 
 		if currentID == end {
 			// Reconstruct path
@@ -74,16 +79,49 @@ func djikstra(nodes map[string]Node, start, end string) (float64, []string) {
 			for at := end; at != ""; at = prev[at] {
 				path = append([]string{at}, path...)
 			}
-			return distances[end], path
+			return costs[end], path
 		}
 
-		currentNode := nodes[currentID]
 		for _, edge := range currentNode.Edges {
-			newDist := distances[currentID] + edge.Distance
-			if newDist < distances[edge.To] {
-				distances[edge.To] = newDist
-				prev[edge.To] = currentID
-				heap.Push(pq, &State{NodeID: edge.To, Distance: newDist, Priority: newDist})
+
+			// Check if we have enough fuel without refueling
+			if edge.FuelRequired <= remainingFuel {
+				newRemainingFuel := remainingFuel - edge.FuelRequired
+				edgeCost := costs[currentID] + edge.Distance
+
+				if edgeCost < costs[edge.To] {
+					costs[edge.To] = edgeCost
+					prev[edge.To] = currentID
+					heap.Push(pq, &State{NodeID: edge.To, Priority: edgeCost, FuelRemaining: newRemainingFuel})
+				}
+			} else {
+				// try a drift path
+				newRemainingFuel := remainingFuel - 1
+				driftCost := 10000.0
+				edgeCost := costs[currentID] + edge.Distance + driftCost
+
+				if edgeCost < costs[edge.To] {
+					costs[edge.To] = edgeCost
+					prev[edge.To] = currentID
+					heap.Push(pq, &State{NodeID: edge.To, Priority: edgeCost, FuelRemaining: newRemainingFuel})
+				}
+			}
+
+			// Option 2: Refuel, if possible
+			if currentNode.HasFuel && shipFuelCapacity >= edge.FuelRequired {
+				// Calculate how much fuel is needed to refill fully
+				blocks := math.Ceil(float64(shipFuelCapacity-remainingFuel) / 100.0)
+				refuelCost := blocks * currentNode.FuelPrice
+
+				// After refueling, we have full fuel minus the fuel needed for this edge
+				newRemainingFuel := shipFuelCapacity - edge.FuelRequired
+				edgeCost := costs[currentID] + edge.Distance + refuelCost
+
+				if edgeCost < costs[edge.To] {
+					costs[edge.To] = edgeCost
+					prev[edge.To] = currentID
+					heap.Push(pq, &State{NodeID: edge.To, Priority: edgeCost, FuelRemaining: newRemainingFuel})
+				}
 			}
 		}
 	}
@@ -91,25 +129,43 @@ func djikstra(nodes map[string]Node, start, end string) (float64, []string) {
 
 }
 
-func FindPath(ship *api.Ship, destSymbol string, waypoints []models.Waypoint) []string {
+func FindPath(ship *api.Ship, destSymbol string, waypoints []*models.Waypoint) (float64, []string) {
 	nodes := map[string]Node{}
 
 	// Create nodes based on waypoints
 	for i, wp := range waypoints {
-		n := Node{ID: string(ship.Nav.WaypointSymbol), FuelCost: 1, Edges: []Edge{}}
+		n := Node{ID: string(ship.Nav.WaypointSymbol), FuelPrice: 72, Edges: []Edge{}, HasFuel: wp.CanRefuel()}
+
 		for j, neighbor := range waypoints {
 			if i != j {
 				// Assuming a function to calculate distance between waypoints
-
-				distance := utils.Distance2dInt(wp.X, wp.Y, neighbor.X, neighbor.Y) // Replace with actual distance calculation
-				if distance < 275 {
-					n.Edges = append(n.Edges, Edge{To: neighbor.Symbol, Distance: float64(distance)})
+				distance := utils.Distance2dInt(wp.X, wp.Y, neighbor.X, neighbor.Y)
+				fuelCost, err := calcFuelCost(distance, string(ship.Nav.FlightMode))
+				if err != nil {
+					panic(err)
 				}
+				n.Edges = append(n.Edges, Edge{To: neighbor.Symbol, Distance: float64(distance), FuelRequired: fuelCost})
 			}
 		}
 		nodes[wp.Symbol] = n
 	}
 
-	_, path := djikstra(nodes, string(ship.Nav.WaypointSymbol), destSymbol)
-	return path[1:]
+	cost, path := djikstra(nodes, string(ship.Nav.WaypointSymbol), destSymbol, ship.Fuel.Capacity)
+	return cost, path
+}
+
+// https://github.com/SpaceTradersAPI/api-docs/wiki/Travel-Fuel-and-Time
+func calcFuelCost(distance int, flightMode string) (int, error) {
+	switch flightMode {
+	case "STEALTH":
+		return max(1, distance), nil
+	case "CRUISE":
+		return max(1, distance), nil
+	case "BURN":
+		return max(2, distance*2), nil
+	case "DRIFT":
+		return 1, nil
+	}
+
+	return math.MaxInt, fmt.Errorf("unknown flight mode: %s", flightMode)
 }

@@ -105,7 +105,7 @@ func (m *ShipAssignment) Transition(event int) {
 	}
 }
 
-func (m *ShipAssignment) Update(client *api.Client) {
+func (m *ShipAssignment) Update(client api.Invoker) {
 
 	ctx := context.TODO()
 

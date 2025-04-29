@@ -18,7 +18,7 @@ var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "returns system/server information",
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := client.Client()
+		client, err := client.GetClient()
 		if err != nil {
 			log.Fatal(err)
 		}

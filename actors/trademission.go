@@ -21,35 +21,49 @@ func (m *TradeMission) Execute(data *Blackboard) {
 	data.repo = m.repo
 	data.mission = m
 
-	m.GetShipBehavior(data.ship.symbol).Tick(&data)
+	m.GetShipBehavior(data.ship.symbol).Tick(data)
 }
 
-func NewTradeMission(client *api.Client, repo *repo.Repo) *TradeMission {
+func NewTradeMission(client api.Invoker, repo *repo.Repo) *TradeMission {
 	base := NewBaseMission(client, repo)
 	base.name = "TradeMission"
 
 	base.roleBehaviors[MissionShipRoleTrader] = bt.NewSelector(
-		// SELL
 		bt.NewSequence(
-			JettisonNonSellableCargo{},
-			ConditionHasCargo{},
-			SetDestinationToBestTradeMarketSale{},
-			bt.NewSequence(
-				NavigationAction(),
-				DockAction{},
-				SellCargoAction{},
+			ConditionHasActiveTrade{},
+			bt.NewSelector(
+				// offload any goods that aren't no the next trade
+				bt.NewSequence(
+					ConditionIsAtTradeSource{},
+					bt.Invert(ConditionCargoIsFull{}),
+					bt.Invert(ConditionHasTradeCargo{}),
+					ActionDock{},
+					ActionBuy{},
+				),
+				bt.NewSequence(
+					ConditionIsAtTradeBuyer{},
+					ConditionHasTradeCargo{},
+					ActionDock{},
+					ActionSellCargo{},
+
+					// if anything prior fails, this wont run
+					ActionAssignBestTrade{},
+				),
+				bt.NewSelector(
+					bt.NewSequence(
+						ConditionHasTradeCargo{},
+						ActionSetDestinationTradeBuyer{},
+						NavigationAction(),
+					),
+					bt.NewSequence(
+						ActionSetDestinationTradeSource{},
+						NavigationAction(),
+					),
+				),
 			),
 		),
 
-		// BUY
-		bt.NewSequence(
-			SetDestinationToBestTradeMarket{},
-			bt.NewSequence(
-				NavigationAction(),
-				DockAction{},
-				BuyAction{},
-			),
-		),
+		ActionAssignBestTrade{},
 	)
 
 	return &TradeMission{

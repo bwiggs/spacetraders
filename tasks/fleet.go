@@ -10,7 +10,7 @@ import (
 	"github.com/bwiggs/spacetraders-go/repo"
 )
 
-func UpdateFleet(client *api.Client, repo *repo.Repo) error {
+func UpdateFleet(client api.Invoker, repo *repo.Repo) error {
 
 	page := 1
 	limit := 20

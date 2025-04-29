@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"image/color"
 	"log"
 	"log/slog"
 	"math"
 	"os"
 	"path"
+	"time"
 
+	"github.com/bwiggs/spacetraders-go/api"
 	"github.com/bwiggs/spacetraders-go/kernel"
 	"github.com/bwiggs/spacetraders-go/models"
 	"github.com/bwiggs/spacetraders-go/tasks"
@@ -26,16 +29,19 @@ func init() {
 	viper.SetEnvPrefix("ST")
 	viper.AutomaticEnv()
 
+	if viper.GetBool("PPROF") {
+		go func() {
+			if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+				slog.Error("failed to start pprof server", "err", err)
+			}
+		}()
+	}
+
 	logHandler := tint.NewHandler(os.Stdout, &tint.Options{Level: slog.LevelDebug})
 	// logHandler := slog.NewJSONHandler(os.Stdout, nil)
 	logger := slog.New(logHandler)
 
 	slog.SetDefault(logger)
-	go func() {
-		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
-			slog.Error("failed to start pprof server", "err", err)
-		}
-	}()
 
 	ud, err := os.UserConfigDir()
 	if err != nil {
@@ -59,42 +65,62 @@ var hudFont font.Face
 
 const (
 	defaultSystemZoom                 = 0.95
-	maxSystemZoom                     = 8.0
+	maxSystemZoom                     = 100.0
 	transitionSystemToGalaxyZoomLevel = 0.012
 
 	transitionGalaxyToSystemZoomLevel = 4.0
-	minGalaxyZoom                     = 0.011
+	minGalaxyZoom                     = 0.005
 
-	showSystemLabelsAtZoom         = 0.4
-	showSystemModeDetailsZoomLevel = 0.5
+	showSystemLabelsAtZoom         = 0.3
+	showSystemModeDetailsZoomLevel = 0.4
 )
 
+var credits int
 var currSystem string
-var waypoints []models.Waypoint
+var waypoints []*models.Waypoint
 var systems []models.System
+var ships []*api.Ship
+var contract *api.Contract
+var agents []*api.Agent
+var agentsBySystem map[string]*api.Agent
 var systemCoords map[string][]float64
 var constellationColors map[string]color.Color
 
 func main() {
 
-	kernel, err := kernel.New()
+	kern, err := kernel.New()
 	if err != nil {
 		slog.Error("failed to create kernel", "err", err)
 		return
 	}
 
-	kernel.Start()
+	kern.Start()
 
 	currSystem = viper.GetString("SYSTEM")
 
-	repo := kernel.Repo()
+	repo := kern.Repo()
 
-	waypoints, err = repo.GetWaypoints(currSystem)
+	waypoints, err = repo.GetNonOrbitalWaypoints(currSystem)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	systems, err = repo.GetSystems()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	agents, err = repo.GetAgents()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	agentsBySystem = make(map[string]*api.Agent)
+	for _, agent := range agents {
+		agentsBySystem[agent.Headquarters[:7]] = agent
+	}
+
+	ships, err = repo.GetFleet()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -117,8 +143,35 @@ func main() {
 
 	tasks.Start()
 
-	defaultFont = loadFont("ui/assets/IBMPlexMono-Medium.ttf", 12)
-	hudFont = loadFont("ui/assets/IBMPlexMono-Regular.ttf", 12)
+	tasks.SetInterval(func() {
+		if err := tasks.UpdateFleet(kern.Client(), kern.Repo()); err != nil {
+			slog.Error("ui: fleet update: failed to update fleet", "err", err)
+		}
+
+		ships, err = repo.GetFleet()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+	}, 10*time.Second)
+
+	tasks.SetInterval(func() {
+		res, err := kern.Client().GetMyAgent(context.TODO())
+		if err != nil {
+			slog.Error("ui: fleet update: failed to update fleet", "err", err)
+		}
+		credits = int(res.Data.Credits)
+	}, 1*time.Minute)
+
+	tasks.SetInterval(func() {
+		contract, err = tasks.GetLatestContract(kern.Client())
+		if err != nil {
+			slog.Error("ui: fleet update: failed to update fleet", "err", err)
+		}
+	}, 15*time.Second)
+
+	defaultFont = loadFont("ui/assets/IBMPlexMono-Medium.ttf", 14)
+	hudFont = loadFont("ui/assets/IBMPlexMono-Regular.ttf", 14)
 
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetWindowSize(2560, 1600)
@@ -126,7 +179,7 @@ func main() {
 	ebiten.SetTPS(60)
 	ebiten.SetWindowTitle("spacetraders.io")
 	slog.Info("spacetraders.io - UI", "system", currSystem, "agent", viper.GetString("AGENT"))
-	if err := ebiten.RunGame(NewGame(kernel)); err != nil {
+	if err := ebiten.RunGame(NewGame(kern)); err != nil {
 		log.Fatal(err)
 	}
 }
