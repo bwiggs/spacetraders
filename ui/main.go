@@ -100,16 +100,20 @@ func main() {
 
 	repo := kern.Repo()
 
+	slog.Info("loading waypoints")
+
 	waypoints, err = repo.GetNonOrbitalWaypoints(currSystem)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	slog.Info("loading systems")
 	systems, err = repo.GetSystems()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	slog.Info("loading agents")
 	agents, err = repo.GetAgents()
 	if err != nil {
 		log.Fatal(err)
@@ -120,11 +124,13 @@ func main() {
 		agentsBySystem[agent.Headquarters[:7]] = agent
 	}
 
+	slog.Info("loading fleet")
 	ships, err = repo.GetFleet()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	slog.Info("loading contellation colors")
 	systemCoords = make(map[string][]float64)
 	constellationColors = make(map[string]color.Color)
 	for _, system := range systems {
@@ -134,6 +140,7 @@ func main() {
 		}
 	}
 
+	slog.Info("calculating waypoint distances")
 	// compute distance from center for each waypoint
 	for i := 0; i < len(waypoints); i++ {
 		dx := float64(waypoints[i].X) - 0.0
@@ -141,9 +148,11 @@ func main() {
 		waypoints[i].Dist = math.Hypot(dx, dy)
 	}
 
+	slog.Info("starting tasks")
 	tasks.Start()
 
-	tasks.SetInterval(func() {
+	slog.Info("starting tasks: updatefleet")
+	go tasks.SetInterval(func() {
 		if err := tasks.UpdateFleet(kern.Client(), kern.Repo()); err != nil {
 			slog.Error("ui: fleet update: failed to update fleet", "err", err)
 		}
@@ -155,7 +164,8 @@ func main() {
 
 	}, 10*time.Second)
 
-	tasks.SetInterval(func() {
+	slog.Info("starting tasks: my credits")
+	go tasks.SetInterval(func() {
 		res, err := kern.Client().GetMyAgent(context.TODO())
 		if err != nil {
 			slog.Error("ui: fleet update: failed to update fleet", "err", err)
@@ -163,13 +173,15 @@ func main() {
 		credits = int(res.Data.Credits)
 	}, 1*time.Minute)
 
-	tasks.SetInterval(func() {
+	slog.Info("starting tasks: contracts")
+	go tasks.SetInterval(func() {
 		contract, err = tasks.GetLatestContract(kern.Client())
 		if err != nil {
 			slog.Error("ui: fleet update: failed to update fleet", "err", err)
 		}
 	}, 15*time.Second)
 
+	slog.Info("loading fonts")
 	defaultFont = loadFont("ui/assets/IBMPlexMono-Medium.ttf", 14)
 	hudFont = loadFont("ui/assets/IBMPlexMono-Regular.ttf", 14)
 

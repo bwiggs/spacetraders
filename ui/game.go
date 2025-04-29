@@ -264,7 +264,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// g.DrawContractStatus(screen, nil)
 	g.DrawCredits(screen, credits)
-	g.DrawContracts(screen, []api.Contract{*contract})
+	if contract != nil {
+		g.DrawContracts(screen, []api.Contract{*contract})
+	}
 
 	mx, my := ebiten.CursorPosition()
 	dbg := fmt.Sprintf("%s | TPS: %.2f | ZOOM: %.3f | R:%dx%d | M:%dx%d", viper.GetString("SYSTEM"), ebiten.ActualTPS(), g.camera.Zoom, sw, sh, mx, my)
